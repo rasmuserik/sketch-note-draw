@@ -1,0 +1,12 @@
+{
+  "name": "sketch-note-draw",
+  "version": "0.0.0",
+  "description": "Simple sketching program, with clean interface",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rasmuserik/sketch-note-draw.git"
+  },
+  "dependencies": {
+    "hammerjs": "~1.0.10"
+  }
+}

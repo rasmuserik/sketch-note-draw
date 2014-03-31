@@ -1,0 +1,8 @@
+name: sketch-note-draw
+desc: Simple sketching program, with clean interface
+phonegap: {}
+html:
+  body: |
+    <canvas id=canvas></canvas>
+    <div id=log></div>
+bower: {}

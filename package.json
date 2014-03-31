@@ -1,0 +1,12 @@
+{
+  "version": "0.0.0",
+  "name": "sketch-note-draw",
+  "description": "Simple sketching program, with clean interface",
+  "authors": [
+    "Rasmus Erik Voel Jensen (solsort.com)"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rasmuserik/sketch-note-draw.git"
+  }
+}
