@@ -121,35 +121,25 @@
       }
     });
     uu.domListen(canvas, "touchmove", function(e) {
-      var current, dscale, x, y;
+      var current, x, y;
       e.preventDefault();
+      ctx.fillText(JSON.stringify([kind, e.touches.length]), 10, 10);
       if ("draw" === kind) {
         x = e.touches[0].clientX / scale - rootX;
         y = e.touches[0].clientY / scale - rootY;
         drawSegment(stroke[stroke.length - 2], stroke[stroke.length - 1], x, y);
         stroke.push(x, y);
       }
-      if ("multitouch" === kind) {
+      if (2 === e.touches.length) {
         current = {
           x: (e.touches[0].clientX + e.touches[1].clientX) / 2 / multitouch.scale - multitouch.rootX,
           y: (e.touches[0].clientY + e.touches[1].clientY) / 2 / multitouch.scale - multitouch.rootY,
           dist: dist(e.touches[0].clientX, e.touches[0].clientY, e.touches[1].clientX, e.touches[1].clientY)
         };
         scale = multitouch.scale * current.dist / multitouch.dist;
-        dscale = multitouch.dist / current.dist - 1;
-        rootX = multitouch.rootX + (current.x - multitouch.x) / current.dist * multitouch.dist + current.x * dscale;
-        rootY = multitouch.rootY + (current.y - multitouch.y) / current.dist * multitouch.dist + current.y * dscale;
-        redraw();
-        ctx.fillStyle = "red";
-        ctx.fillText(JSON.stringify([rootX, rootY, multitouch]), 10, 10);
-        ctx.fillRect(e.touches[0].clientX, e.touches[0].clientY, 5, 5);
-        ctx.fillStyle = "blue";
-        ctx.fillRect(e.touches[1].clientX, e.touches[1].clientY, 5, 5);
-        ctx.fillStyle = "yellow";
-        ctx.fillRect((current.x + multitouch.rootX) * multitouch.scale, (current.y + multitouch.rootY) * multitouch.scale, 10, 10);
-        ctx.fillStyle = "green";
-        ctx.fillRect((multitouch.x + rootX) * scale, (multitouch.y + rootY) * scale, 5, 5);
-        return ctx.fillStyle = "black";
+        rootX = (current.x + multitouch.rootX) * multitouch.scale / scale - multitouch.x;
+        rootY = (current.y + multitouch.rootY) * multitouch.scale / scale - multitouch.y;
+        return uu.nextTick(redraw());
       }
     });
     uu.domListen(canvas, "touchend", function(e) {

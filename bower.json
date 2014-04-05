@@ -7,7 +7,6 @@
     "url": "https://github.com/rasmuserik/sketch-note-draw.git"
   },
   "dependencies": {
-    "hammerjs": "~1.0.10",
     "uutil": "~0.0.11"
   }
 }

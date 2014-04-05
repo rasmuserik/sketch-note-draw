@@ -59,23 +59,25 @@ execute main
 # Actual code
 
     
-    t = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-    info = (args...) ->
-      t.shift()
-      t.push args
-      log.innerHTML = JSON.stringify t
-    
+
+## state
+
     strokes = []
     stroke = []
     transform = false
     hold = false
     
-    rootX = rootX0 = 0
-    rootY = rootY0 = 0
-    scale = scale0 = 1
+    rootX = 0
+    rootY = 0
+    scale = 1
     
     ctx = undefined
+    kind = undefined
+    multitouch = undefined
     
+
+## draw+layout
+
     redraw = ->
       ctx.clearRect 0, 0, canvas.width, canvas.height
       for stroke in strokes
@@ -97,75 +99,80 @@ execute main
       canvas.style.left = "0px"
       canvas.width = window.innerWidth
       canvas.height = window.innerHeight
+
+## Utility
+
+    dist = (x0,y0,x1,y1) ->
+      dx = x0 - x1
+      dy = y0 - y1
+      Math.sqrt(dx*dx + dy*dy)
     
+
+## handle touches
+
     onReady ->
       ctx = canvas.getContext "2d"
       layout()
     
+
+## touchstart
+
       uu.domListen canvas, "touchstart", (e) ->
-        alert "HERE"
         e.preventDefault()
-        if 1 == touches.length
-          stroke = [e.touches[0].clientX, e.touches[0].clientY]
-        else
-          alert "multitouch"
+        if 1 == e.touches.length
+          x = (e.touches[0].clientX) / scale - rootX
+          y = (e.touches[0].clientY) / scale - rootY
+          stroke = [x, y]
+          kind = "draw"
+        else if 2 == e.touches.length
+          kind = "multitouch"
+          multitouch =
+            x: (e.touches[0].clientX + e.touches[1].clientX) / 2 / scale - rootX
+            y: (e.touches[0].clientY + e.touches[1].clientY) / 2 / scale - rootY
+            dist: dist e.touches[0].clientX, e.touches[0].clientY, e.touches[1].clientX, e.touches[1].clientY
+            rootX: rootX
+            rootY: rootY
+            scale: scale
     
+
+## touchmove
+
       uu.domListen canvas, "touchmove", (e) ->
         e.preventDefault()
-        x = (e.touches[0].clientX) / scale - rootX
-        y = (e.touches[0].clientY) / scale - rootY
-        drawSegment stroke[stroke.length - 2], stroke[stroke.length - 1], x, y
-        stroke.push x, y
+        ctx.fillText JSON.stringify([kind, e.touches.length]), 10, 10
+    
+        if "draw" == kind
+          x = (e.touches[0].clientX) / scale - rootX
+          y = (e.touches[0].clientY) / scale - rootY
+          drawSegment stroke[stroke.length - 2], stroke[stroke.length - 1], x, y
+          stroke.push x, y
+    
+        if 2 == e.touches.length
+          current =
+            x: (e.touches[0].clientX + e.touches[1].clientX) / 2 / multitouch.scale - multitouch.rootX
+            y: (e.touches[0].clientY + e.touches[1].clientY) / 2 / multitouch.scale - multitouch.rootY
+            dist: dist e.touches[0].clientX, e.touches[0].clientY, e.touches[1].clientX, e.touches[1].clientY
+          scale = multitouch.scale * current.dist / multitouch.dist
+          rootX = (current.x + multitouch.rootX) * multitouch.scale / scale - multitouch.x
+          rootY = (current.y + multitouch.rootY) * multitouch.scale / scale - multitouch.y
+          uu.nextTick redraw()
     
 
-##
+## touchend
 
-      events = Hammer(window)
-      events.on "drag", (e)->
-        x = (e.gesture.touches[0].clientX) / scale - rootX
-        y = (e.gesture.touches[0].clientY) / scale - rootY
-        drawSegment stroke[stroke.length - 2], stroke[stroke.length - 1], x, y
-        stroke.push x, y
+      uu.domListen canvas, "touchend", (e) ->
     
-      events.on "dragstart", (e) ->
-        x = (e.gesture.touches[0].clientX) / scale - rootX
-        y = (e.gesture.touches[0].clientY) / scale - rootY
-        stroke = [x, y]
-        console.log "dragstart"
-        transform = false
-        hold = false
-    
-      events.on "transformstart transformend", ->
-        transform = true
-    
-      events.on "transformstart", (e) ->
-        scale0 = scale
-        rootX0 = rootX - e.gesture.deltaX
-        rootY0 = rootY - e.gesture.deltaY / scale
-    
-      events.on "transform", (e) ->
-        rootX = rootX0 + e.gesture.deltaX / scale
-        rootY = rootY0 + e.gesture.deltaY / scale
-        scale = scale0 * e.gesture.scale
-        redraw()
-    
-    
-      events.on "hold tap", (e) ->
-        console.log e
-        hold = true
-        redraw()
-
-menu()
-
-    
-      events.on "dragend", ->
-        if !transform and !hold
+        if "draw" == kind
           strokes.push stroke
-        else
-          redraw()
+    
+        kind = "end"
+    
 
-##
+## resize
 
+      uu.domListen window, "resize", (e) ->
+        layout()
+    
     
 
 ----
