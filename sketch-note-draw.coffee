@@ -84,6 +84,7 @@ layout = ->
   canvas.style.left = "0px"
   canvas.width = window.innerWidth
   canvas.height = window.innerHeight
+  redraw()
 #{{{2 Utility
 dist = (x0,y0,x1,y1) ->
   dx = x0 - x1
@@ -98,6 +99,7 @@ onReady ->
   #{{{2 touchstart
   uu.domListen canvas, "touchstart", (e) ->
     e.preventDefault()
+    info.style.display = "none"
     if 1 == e.touches.length
       x = (e.touches[0].clientX) / scale - rootX
       y = (e.touches[0].clientY) / scale - rootY

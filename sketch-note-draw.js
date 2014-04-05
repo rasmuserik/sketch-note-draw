@@ -87,7 +87,8 @@
     canvas.style.top = "0px";
     canvas.style.left = "0px";
     canvas.width = window.innerWidth;
-    return canvas.height = window.innerHeight;
+    canvas.height = window.innerHeight;
+    return redraw();
   };
 
   dist = function(x0, y0, x1, y1) {
@@ -108,8 +109,9 @@
         y = e.touches[0].clientY / scale - rootY;
         stroke = [x, y];
         kind = "draw";
-        return multitouch = void 0;
+        multitouch = void 0;
       }
+      return info.style.display = "none";
     });
     uu.domListen(canvas, "touchmove", function(e) {
       var current, x, y;

@@ -99,6 +99,7 @@ execute main
       canvas.style.left = "0px"
       canvas.width = window.innerWidth
       canvas.height = window.innerHeight
+      redraw()
 
 ## Utility
 
@@ -125,6 +126,7 @@ execute main
           stroke = [x, y]
           kind = "draw"
           multitouch = undefined
+        info.style.display = "none"
     
 
 ## touchmove
