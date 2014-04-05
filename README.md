@@ -2,13 +2,13 @@
 
 Simple sketching program, with clean interface
 
-# Design
+# Notes
 
 User interface:
 
 - info
-  - tap + move = draw
-  - tap + hold = menu
+  - touch'n'move = draw
+  - touch'n'hold = menu
   - 2 fingers = pan/zoom
   - solsort.com
 - menu
@@ -65,52 +65,107 @@ execute main
       t.push args
       log.innerHTML = JSON.stringify t
     
+    strokes = []
     stroke = []
     transform = false
     hold = false
     
-    rootX = 0
-    rootY = 0
-    scale = 1
+    rootX = rootX0 = 0
+    rootY = rootY0 = 0
+    scale = scale0 = 1
     
     ctx = undefined
     
+    redraw = ->
+      ctx.clearRect 0, 0, canvas.width, canvas.height
+      for stroke in strokes
+        ctx.beginPath()
+        ctx.moveTo (stroke[0] + rootX) * scale, (stroke[1] + rootY) * scale
+        for i in [2..stroke.length] by 2
+          ctx.lineTo (stroke[i] + rootX) * scale, (stroke[i + 1] + rootY) * scale
+        ctx.stroke()
+    
     drawSegment = (x0, y0, x1, y1) ->
       ctx.beginPath()
-      ctx.moveTo x0, y0
-      ctx.lineTo x1, y1
+      ctx.moveTo (x0 + rootX) * scale, (y0 + rootY) * scale
+      ctx.lineTo (x1 + rootX) * scale, (y1 + rootY) * scale
       ctx.stroke()
+    
+    layout = ->
+      canvas.style.position = "absolute"
+      canvas.style.top = "0px"
+      canvas.style.left = "0px"
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
     
     onReady ->
       ctx = canvas.getContext "2d"
-      events = Hammer(window)
-      events.on "drag", (e)->
-        x = (e.gesture.touches[0].clientX - rootX) * scale
-        y = (e.gesture.touches[0].clientY - rootY) * scale
-        if stroke.length
-          drawSegment stroke[stroke.length - 2], stroke[stroke.length - 1], x, y
+      layout()
+    
+      uu.domListen canvas, "touchstart", (e) ->
+        alert "HERE"
+        e.preventDefault()
+        if 1 == touches.length
+          stroke = [e.touches[0].clientX, e.touches[0].clientY]
+        else
+          alert "multitouch"
+    
+      uu.domListen canvas, "touchmove", (e) ->
+        e.preventDefault()
+        x = (e.touches[0].clientX) / scale - rootX
+        y = (e.touches[0].clientY) / scale - rootY
+        drawSegment stroke[stroke.length - 2], stroke[stroke.length - 1], x, y
         stroke.push x, y
     
-      events.on "dragstart", ->
-        stroke = []
+
+##
+
+      events = Hammer(window)
+      events.on "drag", (e)->
+        x = (e.gesture.touches[0].clientX) / scale - rootX
+        y = (e.gesture.touches[0].clientY) / scale - rootY
+        drawSegment stroke[stroke.length - 2], stroke[stroke.length - 1], x, y
+        stroke.push x, y
+    
+      events.on "dragstart", (e) ->
+        x = (e.gesture.touches[0].clientX) / scale - rootX
+        y = (e.gesture.touches[0].clientY) / scale - rootY
+        stroke = [x, y]
+        console.log "dragstart"
         transform = false
         hold = false
     
       events.on "transformstart transformend", ->
         transform = true
     
+      events.on "transformstart", (e) ->
+        scale0 = scale
+        rootX0 = rootX - e.gesture.deltaX
+        rootY0 = rootY - e.gesture.deltaY / scale
+    
+      events.on "transform", (e) ->
+        rootX = rootX0 + e.gesture.deltaX / scale
+        rootY = rootY0 + e.gesture.deltaY / scale
+        scale = scale0 * e.gesture.scale
+        redraw()
+    
+    
       events.on "hold tap", (e) ->
         console.log e
         hold = true
-        menu()
+        redraw()
+
+menu()
+
     
       events.on "dragend", ->
         if !transform and !hold
-          strokes.push
-            scale: scale
-            strokes: strokes
+          strokes.push stroke
         else
           redraw()
+
+##
+
     
 
 ----
