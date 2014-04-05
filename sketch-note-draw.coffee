@@ -46,27 +46,23 @@ use = if isNodeJs then ((module) -> require module) else ((module) -> window[mod
 onReady = (fn) ->
   if isWindow
     if document.readystate != "complete" then fn() else setTimeout (-> onReady fn), 17 
-# {{{1 Actual code
+#{{{1 Actual code
 
-t = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-info = (args...) ->
-  t.shift()
-  t.push args
-  log.innerHTML = JSON.stringify t
-
+#{{{2 state
 strokes = []
 stroke = []
 transform = false
 hold = false
 
-rootX = rootX0 = 0
-rootY = rootY0 = 0
-scale = scale0 = 1
+rootX = 0
+rootY = 0
+scale = 1
 
 ctx = undefined
 kind = undefined
 multitouch = undefined
 
+#{{{2 draw+layout
 redraw = ->
   ctx.clearRect 0, 0, canvas.width, canvas.height
   for stroke in strokes
@@ -88,16 +84,18 @@ layout = ->
   canvas.style.left = "0px"
   canvas.width = window.innerWidth
   canvas.height = window.innerHeight
+#{{{2 Utility
+dist = (x0,y0,x1,y1) ->
+  dx = x0 - x1
+  dy = y0 - y1
+  Math.sqrt(dx*dx + dy*dy)
 
+#{{{2 handle touches
 onReady ->
   ctx = canvas.getContext "2d"
   layout()
-  dist = (x0,y0,x1,y1) ->
-    dx = x0 - x1
-    dy = y0 - y1
-    Math.sqrt(dx*dx + dy*dy)
 
-
+  #{{{2 touchstart
   uu.domListen canvas, "touchstart", (e) ->
     e.preventDefault()
     if 1 == e.touches.length
@@ -108,13 +106,14 @@ onReady ->
     else if 2 == e.touches.length
       kind = "multitouch"
       multitouch =
-        x: (e.touches[0].clientX + e.touches[1].clientX) / 2
-        y: (e.touches[0].clientY + e.touches[1].clientY) / 2
+        x: (e.touches[0].clientX + e.touches[1].clientX) / 2 / scale - rootX
+        y: (e.touches[0].clientY + e.touches[1].clientY) / 2 / scale - rootY
         dist: dist e.touches[0].clientX, e.touches[0].clientY, e.touches[1].clientX, e.touches[1].clientY
         rootX: rootX
         rootY: rootY
         scale: scale
 
+  #{{{2 touchmove
   uu.domListen canvas, "touchmove", (e) ->
     e.preventDefault()
 
@@ -126,23 +125,30 @@ onReady ->
 
     if "multitouch" == kind
       current =
-        x: (e.touches[0].clientX + e.touches[1].clientX) / 2
-        y: (e.touches[0].clientY + e.touches[1].clientY) / 2
+        x: (e.touches[0].clientX + e.touches[1].clientX) / 2 / multitouch.scale - multitouch.rootX
+        y: (e.touches[0].clientY + e.touches[1].clientY) / 2 / multitouch.scale - multitouch.rootY
         dist: dist e.touches[0].clientX, e.touches[0].clientY, e.touches[1].clientX, e.touches[1].clientY
       scale = multitouch.scale * current.dist / multitouch.dist
-      dscale = multitouch.scale / scale - 1
-      rootX = multitouch.rootX + current.x - multitouch.x + current.x * dscale
-      rootY = multitouch.rootY + current.y - multitouch.y + current.y * dscale
+      dscale = multitouch.dist / current.dist - 1
+      rootX = multitouch.rootX + (current.x - multitouch.x) / current.dist * multitouch.dist + current.x * dscale
+      rootY = multitouch.rootY + (current.y - multitouch.y) / current.dist * multitouch.dist + current.y * dscale
+      #rootX = (multitouch.rootX + current.x) * multitouch.scale # + (current.x - multitouch.x) * dscale
+      #rootY = (multitouch.rootY + current.y) * multitouch.scale # + (current.y - multitouch.y) * dscale
+      #rootX = multitouch.rootX + current.x - multitouch.x + current.x * dscale
+      #rootY = multitouch.rootY + current.y - multitouch.y + current.y * dscale
       redraw()
       ctx.fillStyle = "red"
       ctx.fillText JSON.stringify([rootX, rootY, multitouch]), 10, 10
       ctx.fillRect e.touches[0].clientX, e.touches[0].clientY, 5, 5
       ctx.fillStyle = "blue"
       ctx.fillRect e.touches[1].clientX, e.touches[1].clientY, 5, 5
+      ctx.fillStyle = "yellow"
+      ctx.fillRect (current.x + multitouch.rootX) * multitouch.scale, (current.y + multitouch.rootY) * multitouch.scale, 10, 10
       ctx.fillStyle = "green"
-      ctx.fillRect (e.touches[0].clientX + e.touches[1].clientX) / 2, (e.touches[0].clientY + e.touches[1].clientY) / 2, 5, 5
+      ctx.fillRect (multitouch.x + rootX) * scale, (multitouch.y + rootY) * scale, 5, 5
       ctx.fillStyle = "black"
 
+  #{{{2 touchend
   uu.domListen canvas, "touchend", (e) ->
 
     if "draw" == kind
@@ -150,49 +156,7 @@ onReady ->
 
     kind = "end"
 
+  #{{{2 resize
   uu.domListen window, "resize", (e) ->
     layout()
 
-###
-  events = Hammer(window)
-  events.on "drag", (e)->
-    x = (e.gesture.touches[0].clientX) / scale - rootX
-    y = (e.gesture.touches[0].clientY) / scale - rootY
-    drawSegment stroke[stroke.length - 2], stroke[stroke.length - 1], x, y
-    stroke.push x, y
-
-  events.on "dragstart", (e) ->
-    x = (e.gesture.touches[0].clientX) / scale - rootX
-    y = (e.gesture.touches[0].clientY) / scale - rootY
-    stroke = [x, y]
-    console.log "dragstart"
-    transform = false
-    hold = false
-
-  events.on "transformstart transformend", ->
-    transform = true
-
-  events.on "transformstart", (e) ->
-    scale0 = scale
-    rootX0 = rootX - e.gesture.deltaX
-    rootY0 = rootY - e.gesture.deltaY / scale
-
-  events.on "transform", (e) ->
-    rootX = rootX0 + e.gesture.deltaX / scale
-    rootY = rootY0 + e.gesture.deltaY / scale
-    scale = scale0 * e.gesture.scale
-    redraw()
-
-
-  events.on "hold tap", (e) ->
-    console.log e
-    hold = true
-    redraw()
-    #menu()
-
-  events.on "dragend", ->
-    if !transform and !hold
-      strokes.push stroke
-    else
-      redraw()
-      ###
