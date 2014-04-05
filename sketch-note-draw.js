@@ -107,23 +107,13 @@
         x = e.touches[0].clientX / scale - rootX;
         y = e.touches[0].clientY / scale - rootY;
         stroke = [x, y];
-        return kind = "draw";
-      } else if (2 === e.touches.length) {
-        kind = "multitouch";
-        return multitouch = {
-          x: (e.touches[0].clientX + e.touches[1].clientX) / 2 / scale - rootX,
-          y: (e.touches[0].clientY + e.touches[1].clientY) / 2 / scale - rootY,
-          dist: dist(e.touches[0].clientX, e.touches[0].clientY, e.touches[1].clientX, e.touches[1].clientY),
-          rootX: rootX,
-          rootY: rootY,
-          scale: scale
-        };
+        kind = "draw";
+        return multitouch = void 0;
       }
     });
     uu.domListen(canvas, "touchmove", function(e) {
       var current, x, y;
       e.preventDefault();
-      ctx.fillText(JSON.stringify([kind, e.touches.length]), 10, 10);
       if ("draw" === kind) {
         x = e.touches[0].clientX / scale - rootX;
         y = e.touches[0].clientY / scale - rootY;
@@ -131,15 +121,28 @@
         stroke.push(x, y);
       }
       if (2 === e.touches.length) {
-        current = {
-          x: (e.touches[0].clientX + e.touches[1].clientX) / 2 / multitouch.scale - multitouch.rootX,
-          y: (e.touches[0].clientY + e.touches[1].clientY) / 2 / multitouch.scale - multitouch.rootY,
-          dist: dist(e.touches[0].clientX, e.touches[0].clientY, e.touches[1].clientX, e.touches[1].clientY)
-        };
-        scale = multitouch.scale * current.dist / multitouch.dist;
-        rootX = (current.x + multitouch.rootX) * multitouch.scale / scale - multitouch.x;
-        rootY = (current.y + multitouch.rootY) * multitouch.scale / scale - multitouch.y;
-        return uu.nextTick(redraw());
+        kind = "multitouch";
+        if (!multitouch) {
+          kind = "multitouch";
+          return multitouch = {
+            x: (e.touches[0].clientX + e.touches[1].clientX) / 2 / scale - rootX,
+            y: (e.touches[0].clientY + e.touches[1].clientY) / 2 / scale - rootY,
+            dist: dist(e.touches[0].clientX, e.touches[0].clientY, e.touches[1].clientX, e.touches[1].clientY),
+            rootX: rootX,
+            rootY: rootY,
+            scale: scale
+          };
+        } else {
+          current = {
+            x: (e.touches[0].clientX + e.touches[1].clientX) / 2 / multitouch.scale - multitouch.rootX,
+            y: (e.touches[0].clientY + e.touches[1].clientY) / 2 / multitouch.scale - multitouch.rootY,
+            dist: dist(e.touches[0].clientX, e.touches[0].clientY, e.touches[1].clientX, e.touches[1].clientY)
+          };
+          scale = multitouch.scale * current.dist / multitouch.dist;
+          rootX = (current.x + multitouch.rootX) * multitouch.scale / scale - multitouch.x;
+          rootY = (current.y + multitouch.rootY) * multitouch.scale / scale - multitouch.y;
+          return uu.nextTick(redraw());
+        }
       }
     });
     uu.domListen(canvas, "touchend", function(e) {
