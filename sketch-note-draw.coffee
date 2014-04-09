@@ -202,6 +202,7 @@ addButtons = ->
         kind = buttonId
         buttonFns[buttonId]?()
     )(buttonId)
+    button.ontouchend = touchend
     button.style.position = "absolute"
     button.style.fontSize = "36px"
     button.style.padding = "4px"

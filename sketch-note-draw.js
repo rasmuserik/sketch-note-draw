@@ -246,6 +246,7 @@
           return typeof buttonFns[buttonId] === "function" ? buttonFns[buttonId]() : void 0;
         };
       })(buttonId);
+      button.ontouchend = touchend;
       button.style.position = "absolute";
       button.style.fontSize = "36px";
       button.style.padding = "4px";
