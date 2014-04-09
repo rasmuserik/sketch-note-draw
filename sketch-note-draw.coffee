@@ -50,6 +50,7 @@ onReady = (fn) ->
 
 #{{{2 state
 strokes = []
+redo = []
 stroke = []
 transform = false
 hold = false
@@ -61,10 +62,14 @@ scale = 1
 ctx = undefined
 kind = undefined
 multitouch = undefined
+hasTouch = false
+panPos = undefined
 
 #{{{2 draw+layout
 redraw = ->
-  ctx.clearRect 0, 0, canvas.width, canvas.height
+  ctx.fillStyle = "white"
+  ctx.fillRect 0, 0, canvas.width, canvas.height
+  ctx.fillStyle = "black"
   for stroke in strokes
     ctx.beginPath()
     ctx.moveTo (stroke[0] + rootX) * scale, (stroke[1] + rootY) * scale
@@ -84,6 +89,7 @@ layout = ->
   canvas.style.left = "0px"
   canvas.width = window.innerWidth
   canvas.height = window.innerHeight
+  addButtons()
   redraw()
 #{{{2 Utility
 dist = (x0,y0,x1,y1) ->
@@ -91,62 +97,147 @@ dist = (x0,y0,x1,y1) ->
   dy = y0 - y1
   Math.sqrt(dx*dx + dy*dy)
 
-#{{{2 handle touches
+#{{{2 touch
+touchstart = (x,y) ->
+  stroke = [x/scale-rootX, y/scale-rootY]
+  kind = "draw"
+  multitouch = undefined
+
+touchend = ->
+  strokes.push stroke if "draw" == kind
+  kind = "end"
+
+touchmove = (x0, y0, x1, y1) ->
+  if "draw" == kind
+    x = (x0) / scale - rootX
+    y = (y0) / scale - rootY
+    drawSegment stroke[stroke.length - 2], stroke[stroke.length - 1], x, y
+    stroke.push x, y
+
+  if "pan" == kind
+    if panPos
+      rootX += (x0 - panPos.x) / scale
+      rootY += (y0 - panPos.y) / scale
+      redraw()
+
+    panPos =
+      x: x0
+      y: y0
+
+
+  if "number" == typeof x1
+    kind = "multitouch"
+    if ! multitouch
+      kind = "multitouch"
+      multitouch =
+        x: (e.touches[0].clientX + e.touches[1].clientX) / 2 / scale - rootX
+        y: (e.touches[0].clientY + e.touches[1].clientY) / 2 / scale - rootY
+        dist: dist e.touches[0].clientX, e.touches[0].clientY, e.touches[1].clientX, e.touches[1].clientY
+        rootX: rootX
+        rootY: rootY
+        scale: scale
+    else
+      current =
+        x: (e.touches[0].clientX + e.touches[1].clientX) / 2 / multitouch.scale - multitouch.rootX
+        y: (e.touches[0].clientY + e.touches[1].clientY) / 2 / multitouch.scale - multitouch.rootY
+        dist: dist e.touches[0].clientX, e.touches[0].clientY, e.touches[1].clientX, e.touches[1].clientY
+      scale = multitouch.scale * current.dist / multitouch.dist
+      rootX = (current.x + multitouch.rootX) * multitouch.scale / scale - multitouch.x
+      rootY = (current.y + multitouch.rootY) * multitouch.scale / scale - multitouch.y
+      uu.nextTick redraw()
+
+#{{{2 buttons
+buttonList = ["pan", "zoomin", "zoomout", "undo", "redo", "pan", "pan", "new", "download", "save", "load", "pan"]
+
+buttonAwesome =
+  pan: "arrows"
+  zoomin: "search-plus"
+  zoomout: "search-minus"
+  undo: "undo"
+  redo: "repeat"
+  new: "square-o"
+  download: "download"
+  save: "cloud-upload"
+  load: "cloud-download"
+
+zoomFn = ->
+  if kind.slice(0,4) == "zoom"
+    setTimeout zoomFn, 20
+    zoomScale = if kind == "zoomin" then 1.05 else 1/1.05
+    scale *= zoomScale
+    rootX += canvas.width / scale * (1 - zoomScale) / 2
+    rootY += canvas.height / scale * (1 - zoomScale) / 2
+    setTimeout redraw, 0
+
+buttonFns =
+  pan: -> panPos = undefined
+  download: ->
+    a = document.createElement "a"
+    a.download = "sketch-note-draw.png"
+    a.href = canvas.toDataURL()
+    a.target = "_blank"
+    document.body.appendChild a
+    a.click()
+    document.body.removeChild a
+  zoomin: zoomFn
+  zoomout: zoomFn
+  undo: -> redo.push strokes.pop() if strokes.length; redraw()
+  redo: -> strokes.push redo.pop() if redo.length; redraw()
+  new: -> if strokes.length
+    redo = strokes
+    redo.reverse()
+    strokes = []
+    redraw()
+
+addButtons = ->
+  buttons = document.getElementById "buttons"
+  buttons.innerHTML = ""
+  for i in [0..buttonList.length - 1]
+    buttonId = buttonList[i]
+    button = document.createElement "i"
+    button.className = "fa fa-#{buttonAwesome[buttonId]}"
+    button.onmousedown = button.ontouchstart = ((buttonId) -> (e) ->
+        e.stopPropagation()
+        e.preventDefault()
+        kind = buttonId
+        buttonFns[buttonId]?()
+    )(buttonId)
+    button.style.position = "absolute"
+    button.style.fontSize = "36px"
+    button.style.padding = "4px"
+    button.style.top = if i < 6 then "0px" else "#{window.innerHeight - 44}px"
+    s = (window.innerWidth - 6*44) / 5 + 44
+    button.style.left = "#{(i % 6) * s}px"
+    buttons.appendChild button
+
+#{{{2 onReady
 onReady ->
   ctx = canvas.getContext "2d"
   layout()
 
-  #{{{2 touchstart
-  uu.domListen canvas, "touchstart", (e) ->
+  uu.domListen window, "touchstart", (e) ->
     e.preventDefault()
-    info.style.display = "none"
-    if 1 == e.touches.length
-      x = (e.touches[0].clientX) / scale - rootX
-      y = (e.touches[0].clientY) / scale - rootY
-      stroke = [x, y]
-      kind = "draw"
-      multitouch = undefined
+    hasTouch = true
+    touchstart(e.touches[0].clientX, e.touches[0].clientY) if 1 == e.touches.length
 
-  #{{{2 touchmove
-  uu.domListen canvas, "touchmove", (e) ->
+  uu.domListen window, "mousedown", (e) ->
     e.preventDefault()
+    touchstart(e.clientX, e.clientY) if !hasTouch
 
-    if "draw" == kind
-      x = (e.touches[0].clientX) / scale - rootX
-      y = (e.touches[0].clientY) / scale - rootY
-      drawSegment stroke[stroke.length - 2], stroke[stroke.length - 1], x, y
-      stroke.push x, y
+  uu.domListen window, "touchmove", (e) ->
+    e.preventDefault()
+    args = []
+    for touch in e.touches
+      args.push touch.clientX
+      args.push touch.clientY
+    touchmove args...
 
-    if 2 == e.touches.length
-      kind = "multitouch"
-      if ! multitouch
-        kind = "multitouch"
-        multitouch =
-          x: (e.touches[0].clientX + e.touches[1].clientX) / 2 / scale - rootX
-          y: (e.touches[0].clientY + e.touches[1].clientY) / 2 / scale - rootY
-          dist: dist e.touches[0].clientX, e.touches[0].clientY, e.touches[1].clientX, e.touches[1].clientY
-          rootX: rootX
-          rootY: rootY
-          scale: scale
-      else
-        current =
-          x: (e.touches[0].clientX + e.touches[1].clientX) / 2 / multitouch.scale - multitouch.rootX
-          y: (e.touches[0].clientY + e.touches[1].clientY) / 2 / multitouch.scale - multitouch.rootY
-          dist: dist e.touches[0].clientX, e.touches[0].clientY, e.touches[1].clientX, e.touches[1].clientY
-        scale = multitouch.scale * current.dist / multitouch.dist
-        rootX = (current.x + multitouch.rootX) * multitouch.scale / scale - multitouch.x
-        rootY = (current.y + multitouch.rootY) * multitouch.scale / scale - multitouch.y
-        uu.nextTick redraw()
+  uu.domListen window, "mousemove", (e) ->
+    e.preventDefault()
+    touchmove e.clientX, e.clientY
 
-  #{{{2 touchend
-  uu.domListen canvas, "touchend", (e) ->
 
-    if "draw" == kind
-      strokes.push stroke
-
-    kind = "end"
-
-  #{{{2 resize
-  uu.domListen window, "resize", (e) ->
-    layout()
+  uu.domListen window, "touchend", (e) -> touchend()
+  uu.domListen window, "mouseup", (e) -> (touchend() if !hasTouch)
+  uu.domListen window, "resize", (e) -> layout()
 

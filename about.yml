@@ -4,9 +4,7 @@ phonegap: {}
 html:
   body: |
     <canvas id=canvas></canvas>
-    <div id=info style="font-family:sans-serif;text-align:center">
-      <div>touch and move = draw</div>
-      <div>dual-touch = zoom/pan</div>
-      <!--div>tap = menu</div-->
-    </div>
+    <div id=buttons></div>
+  css:
+    - font-awesome/css/font-awesome.min.css
 bower: {}
