@@ -76,12 +76,15 @@ execute main
     kind = undefined
     multitouch = undefined
     hasTouch = false
+    panPos = undefined
     
 
 ## draw+layout
 
     redraw = ->
-      ctx.clearRect 0, 0, canvas.width, canvas.height
+      ctx.fillStyle = "white"
+      ctx.fillRect 0, 0, canvas.width, canvas.height
+      ctx.fillStyle = "black"
       for stroke in strokes
         ctx.beginPath()
         ctx.moveTo (stroke[0] + rootX) * scale, (stroke[1] + rootY) * scale
@@ -101,6 +104,7 @@ execute main
       canvas.style.left = "0px"
       canvas.width = window.innerWidth
       canvas.height = window.innerHeight
+      addButtons()
       redraw()
 
 ## Utility
@@ -128,6 +132,17 @@ execute main
         y = (y0) / scale - rootY
         drawSegment stroke[stroke.length - 2], stroke[stroke.length - 1], x, y
         stroke.push x, y
+    
+      if "pan" == kind
+        if panPos
+          rootX += (x0 - panPos.x) / scale
+          rootY += (y0 - panPos.y) / scale
+          redraw()
+    
+        panPos =
+          x: x0
+          y: y0
+    
     
       if "number" == typeof x1
         kind = "multitouch"
@@ -158,18 +173,46 @@ execute main
     buttonAwesome =
       pan: "arrows"
       zoomin: "search-plus"
-      zoomout: "search-plus"
+      zoomout: "search-minus"
       undo: "undo"
       redo: "repeat"
       new: "square-o"
       download: "download"
       save: "cloud-upload"
       load: "cloud-download"
+    
+    zoomFn = ->
+      if kind.slice(0,4) == "zoom"
+        setTimeout zoomFn, 20
+        zoomScale = if kind == "zoomin" then 1.05 else 1/1.05
+        scale *= zoomScale
+        rootX += canvas.width / scale * (1 - zoomScale) / 2
+        rootY += canvas.height / scale * (1 - zoomScale) / 2
+        setTimeout redraw, 0
+    
     buttonFns =
-      undo: -> redo.push strokes.pop(); redraw()
-      redo: -> strokes.push redo.pop(); redraw()
+      pan: -> panPos = undefined
+      download: ->
+        a = document.createElement "a"
+        a.download = "sketch-note-draw.png"
+        a.href = canvas.toDataURL()
+        a.target = "_blank"
+        document.body.appendChild a
+        a.click()
+        document.body.removeChild a
+      zoomin: zoomFn
+      zoomout: zoomFn
+      undo: -> redo.push strokes.pop() if strokes.length; redraw()
+      redo: -> strokes.push redo.pop() if redo.length; redraw()
+      new: -> if strokes.length
+        redo = strokes
+        redo.reverse()
+        strokes = []
+        redraw()
+    
     addButtons = ->
       buttons = document.getElementById "buttons"
+      buttons.innerHTML = ""
       for i in [0..buttonList.length - 1]
         buttonId = buttonList[i]
         button = document.createElement "i"
@@ -177,20 +220,21 @@ execute main
         button.onmousedown = button.ontouchstart = ((buttonId) -> (e) ->
             e.stopPropagation()
             e.preventDefault()
-            buttonFns[buttonId]?()
             kind = buttonId
+            buttonFns[buttonId]?()
         )(buttonId)
         button.style.position = "absolute"
-        button.style.fontSize = "44px"
-        button.style.top = "#{i * 20}px"
-        button.style.left = "#{i * 20}px"
+        button.style.fontSize = "36px"
+        button.style.padding = "4px"
+        button.style.top = if i < 6 then "0px" else "#{window.innerHeight - 44}px"
+        s = (window.innerWidth - 6*44) / 5 + 44
+        button.style.left = "#{(i % 6) * s}px"
         buttons.appendChild button
     
 
 ## onReady
 
     onReady ->
-      addButtons()
       ctx = canvas.getContext "2d"
       layout()
     
