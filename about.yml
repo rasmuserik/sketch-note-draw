@@ -3,8 +3,12 @@ desc: Simple sketching program, with clean interface
 phonegap: {}
 html:
   body: |
+    <style>.gray { color: #aaa;}</style>
     <canvas id=canvas></canvas>
     <div id=buttons></div>
   css:
     - font-awesome/css/font-awesome.min.css
 bower: {}
+files:
+  - font-awesome/css/font-awesome.min.css 
+  - font-awesome/fonts/fontawesome-webfont.ttf

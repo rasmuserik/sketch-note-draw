@@ -363,10 +363,14 @@
   }
 
   (function() {
-    var logData, logId, logSyncing, logUrl, logsBeforeSync, syncDelay;
+    var logData, logId, logSyncing, logUrl, logsBeforeSync, syncDelay, _ref;
     logData = [];
     logId = Math.random();
-    logUrl = "//ssl.solsort.com/api/log";
+    if (isWindow && ((_ref = window.location) != null ? _ref.protocol : void 0) === "http:") {
+      logUrl = "http://ssl.solsort.com/api/log";
+    } else {
+      logUrl = "https://ssl.solsort.com/api/log";
+    }
     logSyncing = false;
     logsBeforeSync = 200;
     syncDelay = 400;

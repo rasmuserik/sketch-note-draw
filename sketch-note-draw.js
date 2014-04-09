@@ -144,18 +144,18 @@
       if (!multitouch) {
         kind = "multitouch";
         return multitouch = {
-          x: (e.touches[0].clientX + e.touches[1].clientX) / 2 / scale - rootX,
-          y: (e.touches[0].clientY + e.touches[1].clientY) / 2 / scale - rootY,
-          dist: dist(e.touches[0].clientX, e.touches[0].clientY, e.touches[1].clientX, e.touches[1].clientY),
+          x: (x0 + x1) / 2 / scale - rootX,
+          y: (y0 + y1) / 2 / scale - rootY,
+          dist: dist(x0, y0, x1, y1),
           rootX: rootX,
           rootY: rootY,
           scale: scale
         };
       } else {
         current = {
-          x: (e.touches[0].clientX + e.touches[1].clientX) / 2 / multitouch.scale - multitouch.rootX,
-          y: (e.touches[0].clientY + e.touches[1].clientY) / 2 / multitouch.scale - multitouch.rootY,
-          dist: dist(e.touches[0].clientX, e.touches[0].clientY, e.touches[1].clientX, e.touches[1].clientY)
+          x: (x0 + x1) / 2 / multitouch.scale - multitouch.rootX,
+          y: (y0 + y1) / 2 / multitouch.scale - multitouch.rootY,
+          dist: dist(x0, y0, x1, y1)
         };
         scale = multitouch.scale * current.dist / multitouch.dist;
         rootX = (current.x + multitouch.rootX) * multitouch.scale / scale - multitouch.x;
@@ -175,13 +175,13 @@
     redo: "repeat",
     "new": "square-o",
     download: "download",
-    save: "cloud-upload",
-    load: "cloud-download"
+    save: "cloud-upload gray",
+    load: "cloud-download gray"
   };
 
   zoomFn = function() {
     var zoomScale;
-    if (kind.slice(0, 4) === "zoom") {
+    if ("zoomin" === kind || "zoomout" === kind) {
       setTimeout(zoomFn, 20);
       zoomScale = kind === "zoomin" ? 1.05 : 1 / 1.05;
       scale *= zoomScale;
@@ -230,23 +230,35 @@
   };
 
   addButtons = function() {
-    var button, buttonId, buttons, i, s, _i, _ref, _results;
+    var button, buttonId, buttons, i, s, _fn, _i, _ref, _results;
     buttons = document.getElementById("buttons");
     buttons.innerHTML = "";
+    _fn = function(buttonId) {
+      var touchhandler;
+      touchhandler = function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        kind = buttonId;
+        return typeof buttonFns[buttonId] === "function" ? buttonFns[buttonId]() : void 0;
+      };
+      button.ontouchstart = function(e) {
+        hasTouch = true;
+        return touchhandler(e);
+      };
+      return button.onmousedown = function(e) {
+        if (!hasTouch) {
+          return touchhandler(e);
+        }
+      };
+    };
     _results = [];
     for (i = _i = 0, _ref = buttonList.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
       buttonId = buttonList[i];
       button = document.createElement("i");
       button.className = "fa fa-" + buttonAwesome[buttonId];
-      button.onmousedown = button.ontouchstart = (function(buttonId) {
-        return function(e) {
-          e.stopPropagation();
-          e.preventDefault();
-          kind = buttonId;
-          return typeof buttonFns[buttonId] === "function" ? buttonFns[buttonId]() : void 0;
-        };
-      })(buttonId);
-      button.ontouchend = touchend;
+      _fn(buttonId);
+      button.style.WebkitTapHighlightColor = "rgba(0,0,0,0)";
+      button.style.tapHighlightColor = "rgba(0,0,0,0)";
       button.style.position = "absolute";
       button.style.fontSize = "36px";
       button.style.padding = "4px";

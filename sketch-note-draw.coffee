@@ -130,17 +130,17 @@ touchmove = (x0, y0, x1, y1) ->
     if ! multitouch
       kind = "multitouch"
       multitouch =
-        x: (e.touches[0].clientX + e.touches[1].clientX) / 2 / scale - rootX
-        y: (e.touches[0].clientY + e.touches[1].clientY) / 2 / scale - rootY
-        dist: dist e.touches[0].clientX, e.touches[0].clientY, e.touches[1].clientX, e.touches[1].clientY
+        x: (x0 + x1) / 2 / scale - rootX
+        y: (y0 + y1) / 2 / scale - rootY
+        dist: dist x0, y0, x1, y1
         rootX: rootX
         rootY: rootY
         scale: scale
     else
       current =
-        x: (e.touches[0].clientX + e.touches[1].clientX) / 2 / multitouch.scale - multitouch.rootX
-        y: (e.touches[0].clientY + e.touches[1].clientY) / 2 / multitouch.scale - multitouch.rootY
-        dist: dist e.touches[0].clientX, e.touches[0].clientY, e.touches[1].clientX, e.touches[1].clientY
+        x: (x0 + x1) / 2 / multitouch.scale - multitouch.rootX
+        y: (y0 + y1) / 2 / multitouch.scale - multitouch.rootY
+        dist: dist x0, y0, x1, y1
       scale = multitouch.scale * current.dist / multitouch.dist
       rootX = (current.x + multitouch.rootX) * multitouch.scale / scale - multitouch.x
       rootY = (current.y + multitouch.rootY) * multitouch.scale / scale - multitouch.y
@@ -157,11 +157,11 @@ buttonAwesome =
   redo: "repeat"
   new: "square-o"
   download: "download"
-  save: "cloud-upload"
-  load: "cloud-download"
+  save: "cloud-upload gray"
+  load: "cloud-download gray"
 
 zoomFn = ->
-  if kind.slice(0,4) == "zoom"
+  if "zoomin" == kind || "zoomout" == kind
     setTimeout zoomFn, 20
     zoomScale = if kind == "zoomin" then 1.05 else 1/1.05
     scale *= zoomScale
@@ -196,13 +196,17 @@ addButtons = ->
     buttonId = buttonList[i]
     button = document.createElement "i"
     button.className = "fa fa-#{buttonAwesome[buttonId]}"
-    button.onmousedown = button.ontouchstart = ((buttonId) -> (e) ->
+    ((buttonId) ->
+      touchhandler = (e) ->
         e.stopPropagation()
         e.preventDefault()
         kind = buttonId
         buttonFns[buttonId]?()
+      button.ontouchstart = (e) -> hasTouch = true; touchhandler e
+      button.onmousedown = (e) -> (touchhandler e if !hasTouch)
     )(buttonId)
-    button.ontouchend = touchend
+    button.style.WebkitTapHighlightColor = "rgba(0,0,0,0)"
+    button.style.tapHighlightColor = "rgba(0,0,0,0)"
     button.style.position = "absolute"
     button.style.fontSize = "36px"
     button.style.padding = "4px"
