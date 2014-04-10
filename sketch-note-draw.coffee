@@ -152,7 +152,7 @@ touchmove = (x0, y0, x1, y1) ->
       uu.nextTick redraw()
 
 #{{{2 buttons
-buttonList = ["pan", "zoomin", "zoomout", "undo", "redo", "pan", "pan", "new", "download", "save", "load", "pan"]
+buttonList = ["pan", "files", "undo", "redo", "pan", "pan", "info", "zoomin", "zoomout", "pan"]
 
 buttonAwesome =
   pan: "arrows"
@@ -164,6 +164,8 @@ buttonAwesome =
   download: "download"
   save: "cloud-upload gray"
   load: "cloud-download gray"
+  info: "question"
+  files: "th"
 
 zoomFn = ->
   if "zoomin" == kind || "zoomout" == kind
@@ -193,6 +195,7 @@ buttonFns =
     redo.reverse()
     strokes = []
     redraw()
+buttonFns.files = buttonFns.new # TODO
 
 addButtons = ->
   buttons = document.getElementById "buttons"
@@ -215,9 +218,9 @@ addButtons = ->
     button.style.position = "absolute"
     button.style.fontSize = "36px"
     button.style.padding = "4px"
-    button.style.top = if i < 6 then "0px" else "#{window.innerHeight - 44}px"
-    s = (window.innerWidth - 6*44) / 5 + 44
-    button.style.left = "#{(i % 6) * s}px"
+    button.style.top = if i < 5 then "0px" else "#{window.innerHeight - 44}px"
+    s = (window.innerWidth - 5*44) / 4 + 44
+    button.style.left = "#{(i % 5) * s}px"
     buttons.appendChild button
 
 #{{{2 onReady

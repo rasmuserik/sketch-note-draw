@@ -172,7 +172,7 @@
     }
   };
 
-  buttonList = ["pan", "zoomin", "zoomout", "undo", "redo", "pan", "pan", "new", "download", "save", "load", "pan"];
+  buttonList = ["pan", "files", "undo", "redo", "pan", "pan", "info", "zoomin", "zoomout", "pan"];
 
   buttonAwesome = {
     pan: "arrows",
@@ -183,7 +183,9 @@
     "new": "square-o",
     download: "download",
     save: "cloud-upload gray",
-    load: "cloud-download gray"
+    load: "cloud-download gray",
+    info: "question",
+    files: "th"
   };
 
   zoomFn = function() {
@@ -236,6 +238,8 @@
     }
   };
 
+  buttonFns.files = buttonFns["new"];
+
   addButtons = function() {
     var button, buttonId, buttons, i, s, _fn, _i, _ref, _results;
     buttons = document.getElementById("buttons");
@@ -269,9 +273,9 @@
       button.style.position = "absolute";
       button.style.fontSize = "36px";
       button.style.padding = "4px";
-      button.style.top = i < 6 ? "0px" : "" + (window.innerHeight - 44) + "px";
-      s = (window.innerWidth - 6 * 44) / 5 + 44;
-      button.style.left = "" + ((i % 6) * s) + "px";
+      button.style.top = i < 5 ? "0px" : "" + (window.innerHeight - 44) + "px";
+      s = (window.innerWidth - 5 * 44) / 4 + 44;
+      button.style.left = "" + ((i % 5) * s) + "px";
       _results.push(buttons.appendChild(button));
     }
     return _results;
