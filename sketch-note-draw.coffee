@@ -70,6 +70,7 @@ redraw = ->
   ctx.fillStyle = "white"
   ctx.fillRect 0, 0, canvas.width, canvas.height
   ctx.fillStyle = "black"
+  ctx.lineWidth = Math.sqrt(canvas.width * canvas.height) * 0.002
   for stroke in strokes
     ctx.beginPath()
     ctx.moveTo (stroke[0] + rootX) * scale, (stroke[1] + rootY) * scale
@@ -84,11 +85,15 @@ drawSegment = (x0, y0, x1, y1) ->
   ctx.stroke()
 
 layout = ->
+  window.devicePixelRatio ?= 1
   canvas.style.position = "absolute"
   canvas.style.top = "0px"
   canvas.style.left = "0px"
-  canvas.width = window.innerWidth
-  canvas.height = window.innerHeight
+  canvas.height = window.innerHeight * window.devicePixelRatio | 0
+  canvas.width = window.innerWidth * window.devicePixelRatio | 0
+  canvas.style.width = "#{window.innerWidth}px"
+  canvas.style.height= "#{window.innerHeight}px"
+  console.log window.innerWidth, window.devicePixelRatio, canvas.width
   addButtons()
   redraw()
 #{{{2 Utility
@@ -223,23 +228,23 @@ onReady ->
   uu.domListen window, "touchstart", (e) ->
     e.preventDefault()
     hasTouch = true
-    touchstart(e.touches[0].clientX, e.touches[0].clientY) if 1 == e.touches.length
+    touchstart(e.touches[0].clientX * devicePixelRatio, e.touches[0].clientY * devicePixelRatio) if 1 == e.touches.length
 
   uu.domListen window, "mousedown", (e) ->
     e.preventDefault()
-    touchstart(e.clientX, e.clientY) if !hasTouch
+    touchstart(e.clientX * devicePixelRatio, e.clientY * devicePixelRatio) if !hasTouch
 
   uu.domListen window, "touchmove", (e) ->
     e.preventDefault()
     args = []
     for touch in e.touches
-      args.push touch.clientX
-      args.push touch.clientY
+      args.push touch.clientX * devicePixelRatio
+      args.push touch.clientY * devicePixelRatio
     touchmove args...
 
   uu.domListen window, "mousemove", (e) ->
     e.preventDefault()
-    touchmove e.clientX, e.clientY
+    touchmove e.clientX * devicePixelRatio, e.clientY * devicePixelRatio
 
 
   uu.domListen window, "touchend", (e) -> touchend()

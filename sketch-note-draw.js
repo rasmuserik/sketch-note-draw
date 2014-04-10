@@ -70,6 +70,7 @@
     ctx.fillStyle = "white";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "black";
+    ctx.lineWidth = Math.sqrt(canvas.width * canvas.height) * 0.002;
     _results = [];
     for (_i = 0, _len = strokes.length; _i < _len; _i++) {
       stroke = strokes[_i];
@@ -91,11 +92,17 @@
   };
 
   layout = function() {
+    if (window.devicePixelRatio == null) {
+      window.devicePixelRatio = 1;
+    }
     canvas.style.position = "absolute";
     canvas.style.top = "0px";
     canvas.style.left = "0px";
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.height = window.innerHeight * window.devicePixelRatio | 0;
+    canvas.width = window.innerWidth * window.devicePixelRatio | 0;
+    canvas.style.width = "" + window.innerWidth + "px";
+    canvas.style.height = "" + window.innerHeight + "px";
+    console.log(window.innerWidth, window.devicePixelRatio, canvas.width);
     addButtons();
     return redraw();
   };
@@ -277,13 +284,13 @@
       e.preventDefault();
       hasTouch = true;
       if (1 === e.touches.length) {
-        return touchstart(e.touches[0].clientX, e.touches[0].clientY);
+        return touchstart(e.touches[0].clientX * devicePixelRatio, e.touches[0].clientY * devicePixelRatio);
       }
     });
     uu.domListen(window, "mousedown", function(e) {
       e.preventDefault();
       if (!hasTouch) {
-        return touchstart(e.clientX, e.clientY);
+        return touchstart(e.clientX * devicePixelRatio, e.clientY * devicePixelRatio);
       }
     });
     uu.domListen(window, "touchmove", function(e) {
@@ -293,14 +300,14 @@
       _ref = e.touches;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         touch = _ref[_i];
-        args.push(touch.clientX);
-        args.push(touch.clientY);
+        args.push(touch.clientX * devicePixelRatio);
+        args.push(touch.clientY * devicePixelRatio);
       }
       return touchmove.apply(null, args);
     });
     uu.domListen(window, "mousemove", function(e) {
       e.preventDefault();
-      return touchmove(e.clientX, e.clientY);
+      return touchmove(e.clientX * devicePixelRatio, e.clientY * devicePixelRatio);
     });
     uu.domListen(window, "touchend", function(e) {
       return touchend();
