@@ -64,7 +64,14 @@ execute main
 
     strokes = []
     redo = []
-    stroke = []
+    nextStroke = undefined
+    nextPath = undefined
+    currentStroke =
+      prev: null
+      path: []
+      date: 1
+    allStrokes =
+      1: currentStroke
     transform = false
     hold = false
     
@@ -85,12 +92,17 @@ execute main
       ctx.fillStyle = "white"
       ctx.fillRect 0, 0, canvas.width, canvas.height
       ctx.fillStyle = "black"
-      for stroke in strokes
+      ctx.lineWidth = Math.sqrt(canvas.width * canvas.height) * 0.002
+    
+      stroke = currentStroke
+      while stroke.prev
+        path = stroke.path
         ctx.beginPath()
-        ctx.moveTo (stroke[0] + rootX) * scale, (stroke[1] + rootY) * scale
-        for i in [2..stroke.length] by 2
-          ctx.lineTo (stroke[i] + rootX) * scale, (stroke[i + 1] + rootY) * scale
+        ctx.moveTo (path[0] + rootX) * scale, (path[1] + rootY) * scale
+        for i in [2..path.length] by 2
+          ctx.lineTo (path[i] + rootX) * scale, (path[i + 1] + rootY) * scale
         ctx.stroke()
+        stroke = allStrokes[stroke.prev]
     
     drawSegment = (x0, y0, x1, y1) ->
       ctx.beginPath()
@@ -99,11 +111,15 @@ execute main
       ctx.stroke()
     
     layout = ->
+      window.devicePixelRatio ?= 1
       canvas.style.position = "absolute"
       canvas.style.top = "0px"
       canvas.style.left = "0px"
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
+      canvas.height = window.innerHeight * window.devicePixelRatio | 0
+      canvas.width = window.innerWidth * window.devicePixelRatio | 0
+      canvas.style.width = "#{window.innerWidth}px"
+      canvas.style.height= "#{window.innerHeight}px"
+      console.log window.innerWidth, window.devicePixelRatio, canvas.width
       addButtons()
       redraw()
 
@@ -118,20 +134,26 @@ execute main
 ## touch
 
     touchstart = (x,y) ->
-      stroke = [x/scale-rootX, y/scale-rootY]
+      nextPath = [x/scale-rootX, y/scale-rootY]
+      nextStroke =
+        prev: currentStroke.date
+        path: nextPath
+        date: Date.now()
       kind = "draw"
       multitouch = undefined
     
     touchend = ->
-      strokes.push stroke if "draw" == kind
+      if "draw" == kind
+        allStrokes[nextStroke.date] = nextStroke
+        currentStroke = nextStroke
       kind = "end"
     
     touchmove = (x0, y0, x1, y1) ->
       if "draw" == kind
         x = (x0) / scale - rootX
         y = (y0) / scale - rootY
-        drawSegment stroke[stroke.length - 2], stroke[stroke.length - 1], x, y
-        stroke.push x, y
+        drawSegment nextPath[nextPath.length - 2], nextPath[nextPath.length - 1], x, y
+        nextPath.push x, y
     
       if "pan" == kind
         if panPos
@@ -168,7 +190,7 @@ execute main
 
 ## buttons
 
-    buttonList = ["pan", "zoomin", "zoomout", "undo", "redo", "pan", "pan", "new", "download", "save", "load", "pan"]
+    buttonList = ["pan", "files", "undo", "redo", "pan", "pan", "info", "zoomin", "zoomout", "pan"]
     
     buttonAwesome =
       pan: "arrows"
@@ -180,6 +202,8 @@ execute main
       download: "download"
       save: "cloud-upload gray"
       load: "cloud-download gray"
+      info: "question"
+      files: "th"
     
     zoomFn = ->
       if "zoomin" == kind || "zoomout" == kind
@@ -202,13 +226,17 @@ execute main
         document.body.removeChild a
       zoomin: zoomFn
       zoomout: zoomFn
-      undo: -> redo.push strokes.pop() if strokes.length; redraw()
-      redo: -> strokes.push redo.pop() if redo.length; redraw()
-      new: -> if strokes.length
-        redo = strokes
-        redo.reverse()
-        strokes = []
+      undo: -> if currentStroke.prev
+        redo.push currentStroke
+        currentStroke = allStrokes[currentStroke.prev]
         redraw()
+      redo: -> if redo.length
+        currentStroke = redo.pop()
+        redraw()
+      new: -> if strokes.length
+        currentStroke = allStrokes[1]
+        redraw()
+    buttonFns.files = buttonFns.new # TODO
     
     addButtons = ->
       buttons = document.getElementById "buttons"
@@ -231,9 +259,9 @@ execute main
         button.style.position = "absolute"
         button.style.fontSize = "36px"
         button.style.padding = "4px"
-        button.style.top = if i < 6 then "0px" else "#{window.innerHeight - 44}px"
-        s = (window.innerWidth - 6*44) / 5 + 44
-        button.style.left = "#{(i % 6) * s}px"
+        button.style.top = if i < 5 then "0px" else "#{window.innerHeight - 44}px"
+        s = (window.innerWidth - 5*44) / 4 + 44
+        button.style.left = "#{(i % 5) * s}px"
         buttons.appendChild button
     
 
@@ -246,23 +274,23 @@ execute main
       uu.domListen window, "touchstart", (e) ->
         e.preventDefault()
         hasTouch = true
-        touchstart(e.touches[0].clientX, e.touches[0].clientY) if 1 == e.touches.length
+        touchstart(e.touches[0].clientX * devicePixelRatio, e.touches[0].clientY * devicePixelRatio) if 1 == e.touches.length
     
       uu.domListen window, "mousedown", (e) ->
         e.preventDefault()
-        touchstart(e.clientX, e.clientY) if !hasTouch
+        touchstart(e.clientX * devicePixelRatio, e.clientY * devicePixelRatio) if !hasTouch
     
       uu.domListen window, "touchmove", (e) ->
         e.preventDefault()
         args = []
         for touch in e.touches
-          args.push touch.clientX
-          args.push touch.clientY
+          args.push touch.clientX * devicePixelRatio
+          args.push touch.clientY * devicePixelRatio
         touchmove args...
     
       uu.domListen window, "mousemove", (e) ->
         e.preventDefault()
-        touchmove e.clientX, e.clientY
+        touchmove e.clientX * devicePixelRatio, e.clientY * devicePixelRatio
     
     
       uu.domListen window, "touchend", (e) -> touchend()

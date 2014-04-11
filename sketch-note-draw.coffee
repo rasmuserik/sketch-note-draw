@@ -51,7 +51,14 @@ onReady = (fn) ->
 #{{{2 state
 strokes = []
 redo = []
-stroke = []
+nextStroke = undefined
+nextPath = undefined
+currentStroke =
+  prev: null
+  path: []
+  date: 1
+allStrokes =
+  1: currentStroke
 transform = false
 hold = false
 
@@ -71,12 +78,16 @@ redraw = ->
   ctx.fillRect 0, 0, canvas.width, canvas.height
   ctx.fillStyle = "black"
   ctx.lineWidth = Math.sqrt(canvas.width * canvas.height) * 0.002
-  for stroke in strokes
+
+  stroke = currentStroke
+  while stroke.prev
+    path = stroke.path
     ctx.beginPath()
-    ctx.moveTo (stroke[0] + rootX) * scale, (stroke[1] + rootY) * scale
-    for i in [2..stroke.length] by 2
-      ctx.lineTo (stroke[i] + rootX) * scale, (stroke[i + 1] + rootY) * scale
+    ctx.moveTo (path[0] + rootX) * scale, (path[1] + rootY) * scale
+    for i in [2..path.length] by 2
+      ctx.lineTo (path[i] + rootX) * scale, (path[i + 1] + rootY) * scale
     ctx.stroke()
+    stroke = allStrokes[stroke.prev]
 
 drawSegment = (x0, y0, x1, y1) ->
   ctx.beginPath()
@@ -104,20 +115,26 @@ dist = (x0,y0,x1,y1) ->
 
 #{{{2 touch
 touchstart = (x,y) ->
-  stroke = [x/scale-rootX, y/scale-rootY]
+  nextPath = [x/scale-rootX, y/scale-rootY]
+  nextStroke =
+    prev: currentStroke.date
+    path: nextPath
+    date: Date.now()
   kind = "draw"
   multitouch = undefined
 
 touchend = ->
-  strokes.push stroke if "draw" == kind
+  if "draw" == kind
+    allStrokes[nextStroke.date] = nextStroke
+    currentStroke = nextStroke
   kind = "end"
 
 touchmove = (x0, y0, x1, y1) ->
   if "draw" == kind
     x = (x0) / scale - rootX
     y = (y0) / scale - rootY
-    drawSegment stroke[stroke.length - 2], stroke[stroke.length - 1], x, y
-    stroke.push x, y
+    drawSegment nextPath[nextPath.length - 2], nextPath[nextPath.length - 1], x, y
+    nextPath.push x, y
 
   if "pan" == kind
     if panPos
@@ -188,12 +205,15 @@ buttonFns =
     document.body.removeChild a
   zoomin: zoomFn
   zoomout: zoomFn
-  undo: -> redo.push strokes.pop() if strokes.length; redraw()
-  redo: -> strokes.push redo.pop() if redo.length; redraw()
+  undo: -> if currentStroke.prev
+    redo.push currentStroke
+    currentStroke = allStrokes[currentStroke.prev]
+    redraw()
+  redo: -> if redo.length
+    currentStroke = redo.pop()
+    redraw()
   new: -> if strokes.length
-    redo = strokes
-    redo.reverse()
-    strokes = []
+    currentStroke = allStrokes[1]
     redraw()
 buttonFns.files = buttonFns.new # TODO
 
