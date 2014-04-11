@@ -118,8 +118,15 @@ execute main
       canvas.height = window.innerHeight * window.devicePixelRatio | 0
       canvas.width = window.innerWidth * window.devicePixelRatio | 0
       canvas.style.width = "#{window.innerWidth}px"
-      canvas.style.height= "#{window.innerHeight}px"
+      canvas.style.height = "#{window.innerHeight}px"
       console.log window.innerWidth, window.devicePixelRatio, canvas.width
+    
+      info = document.getElementById "info"
+      info.style.fontSize = "#{Math.min(window.innerHeight, window.innerWidth) >> 4}px"
+      info.style.left = "0px"
+      info.style.width = "#{window.innerWidth}px"
+      info.style.top = "#{(window.innerHeight-info.offsetHeight) * 0.4}px"
+    
       addButtons()
       redraw()
 
@@ -134,6 +141,8 @@ execute main
 ## touch
 
     touchstart = (x,y) ->
+      document.getElementById("info").style.opacity = "0"
+      uu.sleep 1, -> document.getElementById("info").style.display = "none"
       nextPath = [x/scale-rootX, y/scale-rootY]
       nextStroke =
         prev: currentStroke.date
@@ -145,6 +154,8 @@ execute main
     touchend = ->
       if "draw" == kind
         allStrokes[nextStroke.date] = nextStroke
+        localforage.setItem "sketchStroke#{nextStroke.date}", nextStroke
+        localforage.setItem "sketchSavedLatest", nextStroke.date
         currentStroke = nextStroke
       kind = "end"
     
@@ -190,7 +201,7 @@ execute main
 
 ## buttons
 
-    buttonList = ["pan", "files", "undo", "redo", "pan", "pan", "info", "zoomin", "zoomout", "pan"]
+    buttonList = ["pan", "files", "undo", "pan", "pan", "zoomin", "zoomout", "pan"]
     
     buttonAwesome =
       pan: "arrows"
@@ -199,7 +210,7 @@ execute main
       undo: "undo"
       redo: "repeat"
       new: "square-o"
-      download: "download"
+      download: "picture-o"
       save: "cloud-upload gray"
       load: "cloud-download gray"
       info: "question"
@@ -217,6 +228,9 @@ execute main
     buttonFns =
       pan: -> panPos = undefined
       download: ->
+
+##
+
         a = document.createElement "a"
         a.download = "sketch-note-draw.png"
         a.href = canvas.toDataURL()
@@ -224,6 +238,10 @@ execute main
         document.body.appendChild a
         a.click()
         document.body.removeChild a
+
+##
+
+        window.open canvas.toDataURL()
       zoomin: zoomFn
       zoomout: zoomFn
       undo: -> if currentStroke.prev
@@ -259,9 +277,9 @@ execute main
         button.style.position = "absolute"
         button.style.fontSize = "36px"
         button.style.padding = "4px"
-        button.style.top = if i < 5 then "0px" else "#{window.innerHeight - 44}px"
-        s = (window.innerWidth - 5*44) / 4 + 44
-        button.style.left = "#{(i % 5) * s}px"
+        button.style.top = if i < buttonList.length/2 then "0px" else "#{window.innerHeight - 44}px"
+        s = (window.innerWidth - buttonList.length/2*44) / (buttonList.length/2 - 1) + 44
+        button.style.left = "#{(i % (buttonList.length/2)) * s}px"
         buttons.appendChild button
     
 

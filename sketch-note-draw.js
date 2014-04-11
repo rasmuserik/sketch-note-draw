@@ -106,6 +106,7 @@
   };
 
   layout = function() {
+    var info;
     if (window.devicePixelRatio == null) {
       window.devicePixelRatio = 1;
     }
@@ -117,6 +118,11 @@
     canvas.style.width = "" + window.innerWidth + "px";
     canvas.style.height = "" + window.innerHeight + "px";
     console.log(window.innerWidth, window.devicePixelRatio, canvas.width);
+    info = document.getElementById("info");
+    info.style.fontSize = "" + (Math.min(window.innerHeight, window.innerWidth) >> 4) + "px";
+    info.style.left = "0px";
+    info.style.width = "" + window.innerWidth + "px";
+    info.style.top = "" + ((window.innerHeight - info.offsetHeight) * 0.4) + "px";
     addButtons();
     return redraw();
   };
@@ -129,6 +135,10 @@
   };
 
   touchstart = function(x, y) {
+    document.getElementById("info").style.opacity = "0";
+    uu.sleep(1, function() {
+      return document.getElementById("info").style.display = "none";
+    });
     nextPath = [x / scale - rootX, y / scale - rootY];
     nextStroke = {
       prev: currentStroke.date,
@@ -142,6 +152,8 @@
   touchend = function() {
     if ("draw" === kind) {
       allStrokes[nextStroke.date] = nextStroke;
+      localforage.setItem("sketchStroke" + nextStroke.date, nextStroke);
+      localforage.setItem("sketchSavedLatest", nextStroke.date);
       currentStroke = nextStroke;
     }
     return kind = "end";
@@ -192,7 +204,7 @@
     }
   };
 
-  buttonList = ["pan", "files", "undo", "redo", "pan", "pan", "info", "zoomin", "zoomout", "pan"];
+  buttonList = ["pan", "files", "undo", "pan", "pan", "zoomin", "zoomout", "pan"];
 
   buttonAwesome = {
     pan: "arrows",
@@ -201,7 +213,7 @@
     undo: "undo",
     redo: "repeat",
     "new": "square-o",
-    download: "download",
+    download: "picture-o",
     save: "cloud-upload gray",
     load: "cloud-download gray",
     info: "question",
@@ -225,14 +237,17 @@
       return panPos = void 0;
     },
     download: function() {
-      var a;
-      a = document.createElement("a");
-      a.download = "sketch-note-draw.png";
-      a.href = canvas.toDataURL();
-      a.target = "_blank";
-      document.body.appendChild(a);
-      a.click();
-      return document.body.removeChild(a);
+      /*
+      a = document.createElement "a"
+      a.download = "sketch-note-draw.png"
+      a.href = canvas.toDataURL()
+      a.target = "_blank"
+      document.body.appendChild a
+      a.click()
+      document.body.removeChild a
+      */
+
+      return window.open(canvas.toDataURL());
     },
     zoomin: zoomFn,
     zoomout: zoomFn,
@@ -292,9 +307,9 @@
       button.style.position = "absolute";
       button.style.fontSize = "36px";
       button.style.padding = "4px";
-      button.style.top = i < 5 ? "0px" : "" + (window.innerHeight - 44) + "px";
-      s = (window.innerWidth - 5 * 44) / 4 + 44;
-      button.style.left = "" + ((i % 5) * s) + "px";
+      button.style.top = i < buttonList.length / 2 ? "0px" : "" + (window.innerHeight - 44) + "px";
+      s = (window.innerWidth - buttonList.length / 2 * 44) / (buttonList.length / 2 - 1) + 44;
+      button.style.left = "" + ((i % (buttonList.length / 2)) * s) + "px";
       _results.push(buttons.appendChild(button));
     }
     return _results;

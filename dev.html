@@ -16,11 +16,28 @@
      <link rel="stylesheet" href="font-awesome/css/font-awesome.min.css">
   </head>
   <body>
-    <style>.gray { color: #aaa;}</style>
+    <style>
+  body { font-family: sans-serif; }
+  #info { 
+    text-align: center; 
+    position: absolute;
+    transition: opacity 0.5s;
+  }
+</style>
 <canvas id=canvas></canvas>
+<div id=info>
+  touch + move = draw<br>
+  dual-touch = pan/zoom<br>
+  <br>
+  if you <i class="fa fa-heart-o"></i> it<br>
+  tell your friends<br>
+  <br>
+  more on solsort.com<br>
+</div>
 <div id=buttons></div>
 
     <script src="bower_components/uutil/uutil.js"></script>
+    <script src="bower_components/localforage/dist/localforage.min.js"></script>
     <script src="sketch-note-draw.js"></script>
   </body>
 </html>
