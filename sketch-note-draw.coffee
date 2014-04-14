@@ -84,7 +84,7 @@ redraw = ->
 
   stroke = currentStroke
   ctx.strokeStyle = "black"
-  while stroke.prev
+  while stroke && stroke.prev
     path = stroke.path
     ctx.beginPath()
     ctx.moveTo (path[0] + rootX) * scale, (path[1] + rootY) * scale
@@ -259,9 +259,9 @@ loadGridExit = ->
   scaleFit()
   redraw()
 
-loadGridHandleTouch = (x,y) -> #{{{3
-  x = (x * window.devicePixelRatio - gridX0) / (gridSize + gridMargin) | 0
-  y = (y * window.devicePixelRatio - gridY0) / (gridSize + gridMargin) | 0
+loadGridHandleTouch = (x0,y0) -> #{{{3
+  x = (x0 - gridX0) / (gridSize + gridMargin) | 0
+  y = (y0 - gridY0) / (gridSize + gridMargin) | 0
   (gridEvents[x + y * gridCols] || loadGridExit)()
 
 
@@ -420,11 +420,11 @@ loadDB = ->
         return done() if doFetch.length == 0
       visited[id] = true
     else
-      fetchAll()
+      uu.nextTick fetchAll
 
   done = ->
     window.navigator?.splashscreen?.hide?()
-    currentStroke = allStrokes[current]
+    currentStroke = allStrokes[current] || currentStroke
     redraw()
 
   localforage.getItem "sketchCurrent", (id) ->
@@ -466,3 +466,5 @@ onReady ->
   uu.domListen window, "mouseup", (e) -> (touchend() if !hasTouch)
   uu.domListen window, "resize", (e) -> layout()
 
+window.onerror = (e) ->
+  uu.log "error", String(e)

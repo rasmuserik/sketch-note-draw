@@ -127,7 +127,7 @@
     stroke = currentStroke;
     ctx.strokeStyle = "black";
     _results = [];
-    while (stroke.prev) {
+    while (stroke && stroke.prev) {
       path = stroke.path;
       ctx.beginPath();
       ctx.moveTo((path[0] + rootX) * scale, (path[1] + rootY) * scale);
@@ -356,9 +356,10 @@
     return redraw();
   };
 
-  loadGridHandleTouch = function(x, y) {
-    x = (x * window.devicePixelRatio - gridX0) / (gridSize + gridMargin) | 0;
-    y = (y * window.devicePixelRatio - gridY0) / (gridSize + gridMargin) | 0;
+  loadGridHandleTouch = function(x0, y0) {
+    var x, y;
+    x = (x0 - gridX0) / (gridSize + gridMargin) | 0;
+    y = (y0 - gridY0) / (gridSize + gridMargin) | 0;
     return (gridEvents[x + y * gridCols] || loadGridExit)();
   };
 
@@ -571,7 +572,7 @@
         });
         return visited[id] = true;
       } else {
-        return fetchAll();
+        return uu.nextTick(fetchAll);
       }
     };
     done = function() {
@@ -583,7 +584,7 @@
           }
         }
       }
-      currentStroke = allStrokes[current];
+      currentStroke = allStrokes[current] || currentStroke;
       return redraw();
     };
     return localforage.getItem("sketchCurrent", function(id) {
@@ -641,5 +642,9 @@
       return layout();
     });
   });
+
+  window.onerror = function(e) {
+    return uu.log("error", String(e));
+  };
 
 }).call(this);
