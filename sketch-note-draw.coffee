@@ -141,28 +141,34 @@ calcPos = (w) -> #{{{3
 drawEntry = (entry, i, count, x, y) -> #{{{3
   if 1 == i
     drawing = {prev: null, path: []}
-    texts = ["new", "", ""]
+    texts = ["new", ""]
     next = gridNext
-    fn = -> console.log "new"
+    fn = ->
+      currentStroke = allStrokes[1]
+      console.log "new"
   else if 2 == i
     drawing = currentStroke
-    texts = ["current", "", ""]
+    texts = ["current", ""]
     next = gridNext
     fn = -> console.log "current"
   else if count == i && gridNext && gridNext.prevSave
     drawing = {prev: null, path: []}
-    texts = ["more", "", ""]
+    texts = ["more", ""]
     next = gridNext
     fn = -> console.log "more"
   else
     return if !gridNext
     drawing = gridNext
-    texts = ["11:32", "14/2", ""]
-    next = drawing.prevSave
-    fn = -> console.log "gridNext"
+    d = new Date(drawing.date)
+    texts = [
+      d.toString().split(" ")[4]
+      d.toString().split(" ").slice(1,3).join(" ")
+      ]
+    next = allStrokes[drawing.prevSave]
+    fn = -> currentStroke = drawing
   gridEvents.push fn
 
-  ctx.fillStyle = "#aaa"
+  ctx.fillStyle = "black"
   ctx.fillRect x-1,y-1,gridSize+2,gridSize+2
   ctx.fillStyle = "white"
   ctx.fillRect x,y,gridSize,gridSize
@@ -190,7 +196,7 @@ drawEntry = (entry, i, count, x, y) -> #{{{3
   #{{{4 draw
   ctx.lineWidth = 1
   stroke = drawing
-  ctx.strokeStyle = "#aaa"
+  ctx.strokeStyle = "black"
   while stroke.prev
     ctx.beginPath()
     for i in [2..stroke.path.length-1] by 2
@@ -199,12 +205,16 @@ drawEntry = (entry, i, count, x, y) -> #{{{3
     stroke = allStrokes[stroke.prev]
 
   #{{{4 text
-  ctx.fillStyle = "black"
-  fontSize = (gridSize*.2) | 0
+  fontSize = (gridSize*.25) | 0
   ctx.font = "#{fontSize}px sans-serif"
+  ctx.fillStyle = "rgba(255,255,255,0.4)"
+  for dx in [-window.devicePixelRatio..window.devicePixelRatio] by window.devicePixelRatio * .5
+    for dy in [-window.devicePixelRatio..window.devicePixelRatio] by window.devicePixelRatio * .5
+      ctx.fillText texts[0], x + fontSize * .2 + dx, y + fontSize * 1 + dy
+      ctx.fillText texts[1], x + fontSize * .2 + dx, y + fontSize * 2 + dy
+  ctx.fillStyle = "black"
   ctx.fillText texts[0], x + fontSize * .2, y + fontSize * 1
   ctx.fillText texts[1], x + fontSize * .2, y + fontSize * 2
-  ctx.fillText texts[2], x + fontSize * .2, y + fontSize * 3
 
   #{{{4 done
   gridNext = next
@@ -230,13 +240,24 @@ drawGrid = -> #{{{3
       ++i
       entry = drawEntry entry, i, count, x, y
 
+save = -> #{{{3
+  return if currentStroke.prevSave || 1 == currentStroke.date
+  cs = currentStroke
+  localforage.getItem "sketchSaved", (sketchId) ->
+    cs.prevSave = sketchId
+    localforage.setItem "sketchStroke#{cs.date}", cs
+    localforage.setItem "sketchSaved", cs.date
+
 showLoadGrid = -> #{{{3
   gridStart = currentStroke
   document.getElementById("info").style.opacity = "0"
   uu.sleep 1, -> document.getElementById("info").style.display = "none"
   (document.getElementById "buttons").style.display = "none"
   loadGrid = true
-  redraw()
+  save()
+  localforage.getItem "sketchSaved", (sketchId) ->
+    gridStart = allStrokes[sketchId || 1]
+    redraw()
 
 loadGridHandleTouch = (x,y) -> #{{{3
   x = (x * window.devicePixelRatio - gridX0) / (gridSize + gridMargin) | 0
@@ -385,8 +406,36 @@ touchmove = (x0, y0, x1, y1) ->
       rootY = (current.y + multitouch.rootY) * multitouch.scale / scale - multitouch.y
       uu.nextTick redraw()
 
+#{{{2 loadDB
+loadDB = ->
+  console.log "HERE"
+  doFetch = []
+  current = undefined
+  fetchAll = ->
+    return done() if doFetch.length == 0
+    id = doFetch.pop()
+    localforage.getItem "sketchStroke#{id}", (stroke) ->
+      console.log id, stroke, doFetch
+      return if !stroke
+      allStrokes[id] = stroke
+      doFetch.push stroke.prev if stroke.prev != 1
+      doFetch.push stroke.prevSave if stroke.prevSave
+      fetchAll()
+
+  done = ->
+    currentStroke = allStrokes[current]
+    redraw()
+
+  localforage.getItem "sketchCurrent", (id) ->
+    current = id
+    doFetch.push current
+    localforage.getItem "sketchSaved", (saved) ->
+      doFetch.push saved
+      fetchAll()
+
 #{{{2 onReady
 onReady ->
+  loadDB()
   ctx = canvas.getContext "2d"
   layout()
 

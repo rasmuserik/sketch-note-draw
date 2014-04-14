@@ -9,6 +9,10 @@ html:
         text-align: center; 
         position: absolute;
         transition: opacity 0.5s;
+        text-shadow: 2px 2px 2px white, 
+                     -2px -2px 2px white, 
+                     2px -2px 2px white,
+                     -2px 2px 2px white
       }
     </style>
     <canvas id=canvas></canvas>
