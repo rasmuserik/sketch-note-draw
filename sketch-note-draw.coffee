@@ -1,6 +1,5 @@
 # TODO
 #
-# - scale when loading
 # - more button
 # - optimise for performance
 #   - dont have everything in memory
@@ -50,6 +49,35 @@ hasTouch = false
 panPos = undefined
 
 loadGrid = false
+
+findDimensions = (stroke) -> #{{{2
+  return [0,0,1,1] if !stroke || !stroke.prev
+  minY = minX = Number.MAX_VALUE
+  maxY = maxX = -Number.MAX_VALUE
+  update = (x,y) ->
+    minY = Math.min(y, minY)
+    minX = Math.min(x, minX)
+    maxY = Math.max(y, maxY)
+    maxX = Math.max(x, maxX)
+
+  while stroke && stroke.prev
+    for i in [0..stroke.path.length-1] by 2
+      update stroke.path[i], stroke.path[i+1]
+    stroke = allStrokes[stroke.prev]
+
+  return [minX, minY, maxX, maxY]
+
+scaleFit = -> #{{{2
+  [minX, minY, maxX, maxY] = findDimensions currentStroke
+  w = maxX - minX
+  h = maxY - minY
+  console.log w, h, canvas.width, canvas.height
+  scale = Math.min((canvas.width - 6) / w, (canvas.height - 90) / h)
+  rootX = -minX + ((canvas.width / scale) - (maxX - minX)) / 2
+  rootY = -minY + ((canvas.height / scale) - (maxY - minY)) / 2
+  console.log minX, minY, rootX, rootY
+  console.log w, h, canvas.width, canvas.height
+
 #{{{2 draw+layout
 redraw = ->
   return drawGrid() if loadGrid
@@ -107,6 +135,7 @@ gridX0 = undefined
 gridY0 = undefined
 gridCols = undefined
 gridEvents = undefined
+uu.log "starting sketch-note-draw"
 
 calcPos = (w) -> #{{{3
   count = (w - gridMargin) / (gridSize+gridMargin) | 0
@@ -119,9 +148,7 @@ drawEntry = (entry, i, count, x, y) -> #{{{3
     drawing = {prev: null, path: []}
     texts = ["new", ""]
     next = gridNext
-    fn = ->
-      currentStroke = allStrokes[1]
-      console.log "new"
+    fn = -> currentStroke = allStrokes[1]
   else if 2 == i
     drawing = currentStroke
     texts = ["current", ""]
@@ -150,19 +177,7 @@ drawEntry = (entry, i, count, x, y) -> #{{{3
   ctx.fillRect x,y,gridSize,gridSize
 
   #{{{4 find drawing dimension
-  minY = minX = Number.MAX_VALUE
-  maxY = maxX = -Number.MAX_VALUE
-  update = (x,y) ->
-    minY = Math.min(y, minY)
-    minX = Math.min(x, minX)
-    maxY = Math.max(y, maxY)
-    maxX = Math.max(x, maxX)
-
-  stroke = drawing
-  while stroke.prev
-    for i in [0..stroke.path.length-1] by 2
-      update stroke.path[i], stroke.path[i+1]
-    stroke = allStrokes[stroke.prev]
+  [minX, minY, maxX, maxY] = findDimensions drawing
 
   size = Math.max(maxX - minX, maxY - minY)
   px = minX - (size - (maxX - minX)) / 2
@@ -173,7 +188,7 @@ drawEntry = (entry, i, count, x, y) -> #{{{3
   ctx.lineWidth = 1
   stroke = drawing
   ctx.strokeStyle = "black"
-  while stroke.prev
+  while stroke && stroke.prev
     ctx.beginPath()
     for i in [2..stroke.path.length-1] by 2
       ctx.lineTo x+(stroke.path[i]-px)*rescale, y+(stroke.path[i+1]-py)*rescale
@@ -241,6 +256,7 @@ loadGridHandleTouch = (x,y) -> #{{{3
   gridEvents[x + y * gridCols]?()
   (document.getElementById "buttons").style.display = "inline"
   loadGrid = false
+  scaleFit()
   redraw()
 
 
@@ -391,7 +407,6 @@ loadDB = ->
     return done() if doFetch.length == 0
     id = doFetch.pop()
     localforage.getItem "sketchStroke#{id}", (stroke) ->
-      console.log id, stroke, doFetch
       return if !stroke
       allStrokes[id] = stroke
       doFetch.push stroke.prev if stroke.prev != 1
