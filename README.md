@@ -1,10 +1,9 @@
-# sketch-note-draw 0.0.0
+# sketch-note-draw 0.0.1
 
 Simple sketching program, with clean interface
 
 TODO
 
-- more button
 - optimise for performance
   - dont have everything in memory
   - delayed full redraws when panning/zoomin
@@ -185,12 +184,13 @@ execute main
       else
         return if !gridNext
         drawing = gridNext
+        console.log drawing.date, drawing.prevSave
         d = new Date(drawing.date)
         texts = [
           d.toString().split(" ")[4]
           d.toString().split(" ").slice(1,3).join(" ")
           ]
-        next = allStrokes[drawing.prevSave]
+        next = allStrokes[drawing.prevSave] if drawing.date != drawing.prevSave
         fn = ->
           currentStroke = drawing
           loadGridExit()
