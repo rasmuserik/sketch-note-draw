@@ -1,7 +1,7 @@
 {
   "version": "0.0.3",
   "name": "sketch-note-draw",
-  "description": "Simple sketching program, with clean interface",
+  "description": "Simple sketching program, with clean interface.\n\n- Infinite canvas\n- Zoom in/out\n- Also usable with one hand (single thumb)\n- Automatically saves current sketch with timestamp, when loading, or creating a new one.\n- Undo support\n\nMade it because I wanted a tool to make quick sketches / napkin-notes.\n",
   "authors": [
     "Rasmus Erik Voel Jensen (solsort.com)"
   ],

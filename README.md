@@ -1,6 +1,15 @@
 # sketch-note-draw 0.0.3
 
-Simple sketching program, with clean interface
+Simple sketching program, with clean interface.
+
+- Infinite canvas
+- Zoom in/out
+- Also usable with one hand (single thumb)
+- Automatically saves current sketch with timestamp, when loading, or creating a new one.
+- Undo support
+
+Made it because I wanted a tool to make quick sketches / napkin-notes.
+
 
 TODO
 
