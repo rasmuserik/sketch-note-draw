@@ -570,6 +570,14 @@
       });
     };
     done = function() {
+      var _ref, _ref1;
+      if ((_ref = window.navigator) != null) {
+        if ((_ref1 = _ref.splashscreen) != null) {
+          if (typeof _ref1.hide === "function") {
+            _ref1.hide();
+          }
+        }
+      }
       currentStroke = allStrokes[current];
       return redraw();
     };

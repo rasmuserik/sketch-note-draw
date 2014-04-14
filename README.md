@@ -459,6 +459,7 @@ execute main
           fetchAll()
     
       done = ->
+        window.navigator?.splashscreen?.hide?()
         currentStroke = allStrokes[current]
         redraw()
     
