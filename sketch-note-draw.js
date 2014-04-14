@@ -242,9 +242,12 @@
         return;
       }
       drawing = gridNext;
+      console.log(drawing.date, drawing.prevSave);
       d = new Date(drawing.date);
       texts = [d.toString().split(" ")[4], d.toString().split(" ").slice(1, 3).join(" ")];
-      next = allStrokes[drawing.prevSave];
+      if (drawing.date !== drawing.prevSave) {
+        next = allStrokes[drawing.prevSave];
+      }
       fn = function() {
         currentStroke = drawing;
         return loadGridExit();

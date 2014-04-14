@@ -1,6 +1,5 @@
 # TODO
 #
-# - more button
 # - optimise for performance
 #   - dont have everything in memory
 #   - delayed full redraws when panning/zoomin
@@ -166,12 +165,13 @@ drawEntry = (entry, i, count, x, y) -> #{{{3
   else
     return if !gridNext
     drawing = gridNext
+    console.log drawing.date, drawing.prevSave
     d = new Date(drawing.date)
     texts = [
       d.toString().split(" ")[4]
       d.toString().split(" ").slice(1,3).join(" ")
       ]
-    next = allStrokes[drawing.prevSave]
+    next = allStrokes[drawing.prevSave] if drawing.date != drawing.prevSave
     fn = ->
       currentStroke = drawing
       loadGridExit()
