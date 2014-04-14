@@ -148,17 +148,21 @@ drawEntry = (entry, i, count, x, y) -> #{{{3
     drawing = {prev: null, path: []}
     texts = ["new", ""]
     next = gridNext
-    fn = -> currentStroke = allStrokes[1]
+    fn = ->
+      currentStroke = allStrokes[1]
+      loadGridExit()
   else if 2 == i
     drawing = currentStroke
     texts = ["current", ""]
     next = gridNext
-    fn = -> console.log "current"
+    fn = loadGridExit
   else if count == i && gridNext && gridNext.prevSave
     drawing = {prev: null, path: []}
     texts = ["more", ""]
     next = gridNext
-    fn = -> console.log "more"
+    fn = ->
+      gridStart = gridNext
+      redraw()
   else
     return if !gridNext
     drawing = gridNext
@@ -168,7 +172,9 @@ drawEntry = (entry, i, count, x, y) -> #{{{3
       d.toString().split(" ").slice(1,3).join(" ")
       ]
     next = allStrokes[drawing.prevSave]
-    fn = -> currentStroke = drawing
+    fn = ->
+      currentStroke = drawing
+      loadGridExit()
   gridEvents.push fn
 
   ctx.fillStyle = "black"
@@ -250,14 +256,16 @@ showLoadGrid = -> #{{{3
     gridStart = allStrokes[sketchId || 1]
     redraw()
 
-loadGridHandleTouch = (x,y) -> #{{{3
-  x = (x * window.devicePixelRatio - gridX0) / (gridSize + gridMargin) | 0
-  y = (y * window.devicePixelRatio - gridY0) / (gridSize + gridMargin) | 0
-  gridEvents[x + y * gridCols]?()
+loadGridExit = ->
   (document.getElementById "buttons").style.display = "inline"
   loadGrid = false
   scaleFit()
   redraw()
+
+loadGridHandleTouch = (x,y) -> #{{{3
+  x = (x * window.devicePixelRatio - gridX0) / (gridSize + gridMargin) | 0
+  y = (y * window.devicePixelRatio - gridY0) / (gridSize + gridMargin) | 0
+  (gridEvents[x + y * gridCols] || loadGridExit)()
 
 
 #{{{2 buttons
