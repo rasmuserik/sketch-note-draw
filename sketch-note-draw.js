@@ -110,12 +110,9 @@
     _ref = findDimensions(currentStroke), minX = _ref[0], minY = _ref[1], maxX = _ref[2], maxY = _ref[3];
     w = maxX - minX;
     h = maxY - minY;
-    console.log(w, h, canvas.width, canvas.height);
     scale = Math.min((canvas.width - 6) / w, (canvas.height - 90) / h);
     rootX = -minX + ((canvas.width / scale) - (maxX - minX)) / 2;
-    rootY = -minY + ((canvas.height / scale) - (maxY - minY)) / 2;
-    console.log(minX, minY, rootX, rootY);
-    return console.log(w, h, canvas.width, canvas.height);
+    return rootY = -minY + ((canvas.height / scale) - (maxY - minY)) / 2;
   };
 
   redraw = function() {
@@ -225,7 +222,9 @@
       drawing = currentStroke;
       texts = ["current", ""];
       next = gridNext;
-      fn = loadGridExit;
+      fn = function() {
+        return loadGridExit();
+      };
     } else if (count === i && gridNext && gridNext.prevSave) {
       drawing = {
         prev: null,
@@ -242,7 +241,6 @@
         return;
       }
       drawing = gridNext;
-      console.log(drawing.date, drawing.prevSave);
       d = new Date(drawing.date);
       texts = [d.toString().split(" ")[4], d.toString().split(" ").slice(1, 3).join(" ")];
       if (drawing.date !== drawing.prevSave) {
@@ -548,29 +546,33 @@
   };
 
   loadDB = function() {
-    var current, doFetch, done, fetchAll;
-    console.log("HERE");
+    var current, doFetch, done, fetchAll, visited;
     doFetch = [];
     current = void 0;
+    visited = {};
     fetchAll = function() {
       var id;
-      if (doFetch.length === 0) {
-        return done();
-      }
       id = doFetch.pop();
-      return localforage.getItem("sketchStroke" + id, function(stroke) {
-        if (!stroke) {
-          return;
-        }
-        allStrokes[id] = stroke;
-        if (stroke.prev !== 1) {
-          doFetch.push(stroke.prev);
-        }
-        if (stroke.prevSave) {
-          doFetch.push(stroke.prevSave);
-        }
+      if (!visited[id]) {
+        localforage.getItem("sketchStroke" + id, function(stroke) {
+          fetchAll();
+          if (stroke) {
+            allStrokes[id] = stroke;
+            if (stroke.prev) {
+              doFetch.push(stroke.prev);
+            }
+            if (stroke.prevSave) {
+              doFetch.push(stroke.prevSave);
+            }
+          }
+          if (doFetch.length === 0) {
+            return done();
+          }
+        });
+        return visited[id] = true;
+      } else {
         return fetchAll();
-      });
+      }
     };
     done = function() {
       var _ref, _ref1;

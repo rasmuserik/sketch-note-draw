@@ -70,12 +70,9 @@ scaleFit = -> #{{{2
   [minX, minY, maxX, maxY] = findDimensions currentStroke
   w = maxX - minX
   h = maxY - minY
-  console.log w, h, canvas.width, canvas.height
   scale = Math.min((canvas.width - 6) / w, (canvas.height - 90) / h)
   rootX = -minX + ((canvas.width / scale) - (maxX - minX)) / 2
   rootY = -minY + ((canvas.height / scale) - (maxY - minY)) / 2
-  console.log minX, minY, rootX, rootY
-  console.log w, h, canvas.width, canvas.height
 
 #{{{2 draw+layout
 redraw = ->
@@ -154,7 +151,7 @@ drawEntry = (entry, i, count, x, y) -> #{{{3
     drawing = currentStroke
     texts = ["current", ""]
     next = gridNext
-    fn = loadGridExit
+    fn = -> loadGridExit()
   else if count == i && gridNext && gridNext.prevSave
     drawing = {prev: null, path: []}
     texts = ["more", ""]
@@ -165,7 +162,6 @@ drawEntry = (entry, i, count, x, y) -> #{{{3
   else
     return if !gridNext
     drawing = gridNext
-    console.log drawing.date, drawing.prevSave
     d = new Date(drawing.date)
     texts = [
       d.toString().split(" ")[4]
@@ -175,6 +171,7 @@ drawEntry = (entry, i, count, x, y) -> #{{{3
     fn = ->
       currentStroke = drawing
       loadGridExit()
+
   gridEvents.push fn
 
   ctx.fillStyle = "black"
@@ -408,17 +405,21 @@ touchmove = (x0, y0, x1, y1) ->
 
 #{{{2 loadDB
 loadDB = ->
-  console.log "HERE"
   doFetch = []
   current = undefined
+  visited = {}
   fetchAll = ->
-    return done() if doFetch.length == 0
     id = doFetch.pop()
-    localforage.getItem "sketchStroke#{id}", (stroke) ->
-      return if !stroke
-      allStrokes[id] = stroke
-      doFetch.push stroke.prev if stroke.prev != 1
-      doFetch.push stroke.prevSave if stroke.prevSave
+    if !visited[id]
+      localforage.getItem "sketchStroke#{id}", (stroke) ->
+        fetchAll()
+        if stroke
+          allStrokes[id] = stroke
+          doFetch.push stroke.prev if stroke.prev
+          doFetch.push stroke.prevSave if stroke.prevSave
+        return done() if doFetch.length == 0
+      visited[id] = true
+    else
       fetchAll()
 
   done = ->
