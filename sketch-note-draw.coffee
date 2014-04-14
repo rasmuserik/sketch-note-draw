@@ -1,35 +1,11 @@
-# {{{1 Notes
+# TODO
 #
-# User interface:
-#
-# - info
-#   - touch'n'move = draw
-#   - touch'n'hold = menu
-#   - 2 fingers = pan/zoom
-#   - solsort.com
-# - menu
-#   - clear
-#   - save
-#   - load
-#   - png
-#   - scroll 
-#   - zoom
-#   - on screen menu
-#   - login
-# - load
-#   - thumbnails with date + `next`
-#
-# Implementation:
-# - saved drawing
-#   - thumbnail 80x80
-#   - most-recent-edit-time
-#   - list of strokes
-#     - `size`
-#     - `(time, x, y)*`
-# - visualisation
-#   - 3x canvas (2xscreensize): zoom, outer, rerender
-#   - transformation matrix
-#   - current strokes
+# - scale when loading
+# - more button
+# - optimise for performance
+#   - dont have everything in memory
+#   - delayed full redraws when panning/zoomin
+# - sync with cloud storage
 #
 # {{{1 Boilerplate
 # predicates that can be optimised away by uglifyjs
