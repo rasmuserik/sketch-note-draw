@@ -47,6 +47,7 @@ onReady = (fn) ->
   if isWindow
     if document.readystate != "complete" then fn() else setTimeout (-> onReady fn), 17 
 #{{{1 Actual code
+window.devicePixelRatio ?= 1
 
 #{{{2 state
 strokes = []
@@ -72,14 +73,17 @@ multitouch = undefined
 hasTouch = false
 panPos = undefined
 
+loadGrid = false
 #{{{2 draw+layout
 redraw = ->
+  return drawGrid() if loadGrid
   ctx.fillStyle = "white"
   ctx.fillRect 0, 0, canvas.width, canvas.height
   ctx.fillStyle = "black"
   ctx.lineWidth = Math.sqrt(canvas.width * canvas.height) * 0.002
 
   stroke = currentStroke
+  ctx.strokeStyle = "black"
   while stroke.prev
     path = stroke.path
     ctx.beginPath()
@@ -96,7 +100,6 @@ drawSegment = (x0, y0, x1, y1) ->
   ctx.stroke()
 
 layout = ->
-  window.devicePixelRatio ?= 1
   canvas.style.position = "absolute"
   canvas.style.top = "0px"
   canvas.style.left = "0px"
@@ -104,7 +107,6 @@ layout = ->
   canvas.width = window.innerWidth * window.devicePixelRatio | 0
   canvas.style.width = "#{window.innerWidth}px"
   canvas.style.height = "#{window.innerHeight}px"
-  console.log window.innerWidth, window.devicePixelRatio, canvas.width
 
   info = document.getElementById "info"
   info.style.fontSize = "#{Math.min(window.innerHeight, window.innerWidth) >> 4}px"
@@ -120,8 +122,212 @@ dist = (x0,y0,x1,y1) ->
   dy = y0 - y1
   Math.sqrt(dx*dx + dy*dy)
 
+#{{{2 load grid
+gridSize = 60 * window.devicePixelRatio | 0
+gridMargin = 10 * window.devicePixelRatio | 0
+gridNext = undefined
+gridStart = undefined
+gridX0 = undefined
+gridY0 = undefined
+gridCols = undefined
+gridEvents = undefined
+
+calcPos = (w) -> #{{{3
+  count = (w - gridMargin) / (gridSize+gridMargin) | 0
+  totalMargin = w - count * gridSize
+  indent = (w - gridMargin*(count-1) - count * gridSize) >> 1
+  return (indent + (i*(gridSize + gridMargin)) for i in [0..count-1])
+
+drawEntry = (entry, i, count, x, y) -> #{{{3
+  if 1 == i
+    drawing = {prev: null, path: []}
+    texts = ["new", "", ""]
+    next = gridNext
+    fn = -> console.log "new"
+  else if 2 == i
+    drawing = currentStroke
+    texts = ["current", "", ""]
+    next = gridNext
+    fn = -> console.log "current"
+  else if count == i && gridNext && gridNext.prevSave
+    drawing = {prev: null, path: []}
+    texts = ["more", "", ""]
+    next = gridNext
+    fn = -> console.log "more"
+  else
+    return if !gridNext
+    drawing = gridNext
+    texts = ["11:32", "14/2", ""]
+    next = drawing.prevSave
+    fn = -> console.log "gridNext"
+  gridEvents.push fn
+
+  ctx.fillStyle = "#aaa"
+  ctx.fillRect x-1,y-1,gridSize+2,gridSize+2
+  ctx.fillStyle = "white"
+  ctx.fillRect x,y,gridSize,gridSize
+
+  #{{{4 find drawing dimension
+  minY = minX = Number.MAX_VALUE
+  maxY = maxX = -Number.MAX_VALUE
+  update = (x,y) ->
+    minY = Math.min(y, minY)
+    minX = Math.min(x, minX)
+    maxY = Math.max(y, maxY)
+    maxX = Math.max(x, maxX)
+
+  stroke = drawing
+  while stroke.prev
+    for i in [0..stroke.path.length-1] by 2
+      update stroke.path[i], stroke.path[i+1]
+    stroke = allStrokes[stroke.prev]
+
+  size = Math.max(maxX - minX, maxY - minY)
+  px = minX - (size - (maxX - minX)) / 2
+  py = minY - (size - (maxY - minY)) / 2
+  rescale = gridSize / size
+
+  #{{{4 draw
+  ctx.lineWidth = 1
+  stroke = drawing
+  ctx.strokeStyle = "#aaa"
+  while stroke.prev
+    ctx.beginPath()
+    for i in [2..stroke.path.length-1] by 2
+      ctx.lineTo x+(stroke.path[i]-px)*rescale, y+(stroke.path[i+1]-py)*rescale
+    ctx.stroke()
+    stroke = allStrokes[stroke.prev]
+
+  #{{{4 text
+  ctx.fillStyle = "black"
+  fontSize = (gridSize*.2) | 0
+  ctx.font = "#{fontSize}px sans-serif"
+  ctx.fillText texts[0], x + fontSize * .2, y + fontSize * 1
+  ctx.fillText texts[1], x + fontSize * .2, y + fontSize * 2
+  ctx.fillText texts[2], x + fontSize * .2, y + fontSize * 3
+
+  #{{{4 done
+  gridNext = next
+
+  
+drawGrid = -> #{{{3
+  gridEvents = []
+  gridNext = gridStart
+  ctx.fillStyle = "white"
+  ctx.fillRect 0, 0, canvas.width, canvas.height
+  xs = calcPos +canvas.width
+  ys = calcPos +canvas.height
+  gridX0 = xs[0]
+  gridY0 = ys[0]
+  gridCols = xs.length
+  entry =
+    stroke: currentStroke
+    text: "new"
+  i = 0
+  count = ys.length * xs.length
+  for y in ys
+    for x in xs
+      ++i
+      entry = drawEntry entry, i, count, x, y
+
+showLoadGrid = -> #{{{3
+  gridStart = currentStroke
+  document.getElementById("info").style.opacity = "0"
+  uu.sleep 1, -> document.getElementById("info").style.display = "none"
+  (document.getElementById "buttons").style.display = "none"
+  loadGrid = true
+  redraw()
+
+loadGridHandleTouch = (x,y) -> #{{{3
+  x = (x * window.devicePixelRatio - gridX0) / (gridSize + gridMargin) | 0
+  y = (y * window.devicePixelRatio - gridY0) / (gridSize + gridMargin) | 0
+  gridEvents[x + y * gridCols]?()
+  (document.getElementById "buttons").style.display = "inline"
+  loadGrid = false
+  redraw()
+
+
+#{{{2 buttons
+buttonList = ["pan", "files", "undo", "pan", "pan", "zoomin", "zoomout", "pan"]
+
+buttonAwesome =
+  pan: "arrows"
+  zoomin: "search-plus"
+  zoomout: "search-minus"
+  undo: "undo"
+  redo: "repeat"
+  new: "square-o"
+  download: "picture-o"
+  save: "cloud-upload gray"
+  load: "cloud-download gray"
+  info: "question"
+  files: "th"
+
+zoomFn = ->
+  if "zoomin" == kind || "zoomout" == kind
+    setTimeout zoomFn, 20
+    zoomScale = if kind == "zoomin" then 1.05 else 1/1.05
+    scale *= zoomScale
+    rootX += canvas.width / scale * (1 - zoomScale) / 2
+    rootY += canvas.height / scale * (1 - zoomScale) / 2
+    setTimeout redraw, 0
+
+buttonFns =
+  pan: -> panPos = undefined
+  files: showLoadGrid
+  download: ->
+    ###
+    a = document.createElement "a"
+    a.download = "sketch-note-draw.png"
+    a.href = canvas.toDataURL()
+    a.target = "_blank"
+    document.body.appendChild a
+    a.click()
+    document.body.removeChild a
+    ###
+    window.open canvas.toDataURL()
+  zoomin: zoomFn
+  zoomout: zoomFn
+  undo: -> if currentStroke.prev
+    redo.push currentStroke
+    currentStroke = allStrokes[currentStroke.prev]
+    redraw()
+  redo: -> if redo.length
+    currentStroke = redo.pop()
+    redraw()
+  new: -> if strokes.length
+    currentStroke = allStrokes[1]
+    redraw()
+
+addButtons = ->
+  buttons = document.getElementById "buttons"
+  buttons.innerHTML = ""
+  for i in [0..buttonList.length - 1]
+    buttonId = buttonList[i]
+    button = document.createElement "i"
+    button.className = "fa fa-#{buttonAwesome[buttonId]}"
+    ((buttonId) ->
+      touchhandler = (e) ->
+        e.stopPropagation()
+        e.preventDefault()
+        kind = buttonId
+        buttonFns[buttonId]?()
+      button.ontouchstart = (e) -> hasTouch = true; touchhandler e
+      button.onmousedown = (e) -> (touchhandler e if !hasTouch)
+    )(buttonId)
+    button.style.WebkitTapHighlightColor = "rgba(0,0,0,0)"
+    button.style.tapHighlightColor = "rgba(0,0,0,0)"
+    button.style.position = "absolute"
+    button.style.fontSize = "36px"
+    button.style.padding = "4px"
+    button.style.top = if i < buttonList.length/2 then "0px" else "#{window.innerHeight - 44}px"
+    s = (window.innerWidth - buttonList.length/2*44) / (buttonList.length/2 - 1) + 44
+    button.style.left = "#{(i % (buttonList.length/2)) * s}px"
+    buttons.appendChild button
+
 #{{{2 touch
 touchstart = (x,y) ->
+  return loadGridHandleTouch(x,y) if loadGrid
   document.getElementById("info").style.opacity = "0"
   uu.sleep 1, -> document.getElementById("info").style.display = "none"
   nextPath = [x/scale-rootX, y/scale-rootY]
@@ -136,7 +342,7 @@ touchend = ->
   if "draw" == kind
     allStrokes[nextStroke.date] = nextStroke
     localforage.setItem "sketchStroke#{nextStroke.date}", nextStroke
-    localforage.setItem "sketchSavedLatest", nextStroke.date
+    localforage.setItem "sketchCurrent", nextStroke.date
     currentStroke = nextStroke
   kind = "end"
 
@@ -178,84 +384,6 @@ touchmove = (x0, y0, x1, y1) ->
       rootX = (current.x + multitouch.rootX) * multitouch.scale / scale - multitouch.x
       rootY = (current.y + multitouch.rootY) * multitouch.scale / scale - multitouch.y
       uu.nextTick redraw()
-
-#{{{2 buttons
-buttonList = ["pan", "files", "undo", "pan", "pan", "zoomin", "zoomout", "pan"]
-
-buttonAwesome =
-  pan: "arrows"
-  zoomin: "search-plus"
-  zoomout: "search-minus"
-  undo: "undo"
-  redo: "repeat"
-  new: "square-o"
-  download: "picture-o"
-  save: "cloud-upload gray"
-  load: "cloud-download gray"
-  info: "question"
-  files: "th"
-
-zoomFn = ->
-  if "zoomin" == kind || "zoomout" == kind
-    setTimeout zoomFn, 20
-    zoomScale = if kind == "zoomin" then 1.05 else 1/1.05
-    scale *= zoomScale
-    rootX += canvas.width / scale * (1 - zoomScale) / 2
-    rootY += canvas.height / scale * (1 - zoomScale) / 2
-    setTimeout redraw, 0
-
-buttonFns =
-  pan: -> panPos = undefined
-  download: ->
-    ###
-    a = document.createElement "a"
-    a.download = "sketch-note-draw.png"
-    a.href = canvas.toDataURL()
-    a.target = "_blank"
-    document.body.appendChild a
-    a.click()
-    document.body.removeChild a
-    ###
-    window.open canvas.toDataURL()
-  zoomin: zoomFn
-  zoomout: zoomFn
-  undo: -> if currentStroke.prev
-    redo.push currentStroke
-    currentStroke = allStrokes[currentStroke.prev]
-    redraw()
-  redo: -> if redo.length
-    currentStroke = redo.pop()
-    redraw()
-  new: -> if strokes.length
-    currentStroke = allStrokes[1]
-    redraw()
-buttonFns.files = buttonFns.new # TODO
-
-addButtons = ->
-  buttons = document.getElementById "buttons"
-  buttons.innerHTML = ""
-  for i in [0..buttonList.length - 1]
-    buttonId = buttonList[i]
-    button = document.createElement "i"
-    button.className = "fa fa-#{buttonAwesome[buttonId]}"
-    ((buttonId) ->
-      touchhandler = (e) ->
-        e.stopPropagation()
-        e.preventDefault()
-        kind = buttonId
-        buttonFns[buttonId]?()
-      button.ontouchstart = (e) -> hasTouch = true; touchhandler e
-      button.onmousedown = (e) -> (touchhandler e if !hasTouch)
-    )(buttonId)
-    button.style.WebkitTapHighlightColor = "rgba(0,0,0,0)"
-    button.style.tapHighlightColor = "rgba(0,0,0,0)"
-    button.style.position = "absolute"
-    button.style.fontSize = "36px"
-    button.style.padding = "4px"
-    button.style.top = if i < buttonList.length/2 then "0px" else "#{window.innerHeight - 44}px"
-    s = (window.innerWidth - buttonList.length/2*44) / (buttonList.length/2 - 1) + 44
-    button.style.left = "#{(i % (buttonList.length/2)) * s}px"
-    buttons.appendChild button
 
 #{{{2 onReady
 onReady ->
